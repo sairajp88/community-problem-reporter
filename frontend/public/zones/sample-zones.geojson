@@ -1,0 +1,53 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "properties": { "name": "Andheri West" },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [72.82, 19.14],
+            [72.86, 19.14],
+            [72.86, 19.11],
+            [72.82, 19.11],
+            [72.82, 19.14]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": { "name": "Andheri East" },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [72.86, 19.14],
+            [72.90, 19.14],
+            [72.90, 19.11],
+            [72.86, 19.11],
+            [72.86, 19.14]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": { "name": "Bandra West" },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [72.82, 19.11],
+            [72.86, 19.11],
+            [72.86, 19.08],
+            [72.82, 19.08],
+            [72.82, 19.11]
+          ]
+        ]
+      }
+    }
+  ]
+}
