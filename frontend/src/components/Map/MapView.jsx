@@ -68,4 +68,3 @@ const MapView = () => {
 };
 
 export default MapView;
-frontend/src/components/Map frontend/src/main.jsx
