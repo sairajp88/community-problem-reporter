@@ -4,7 +4,8 @@ import View from "ol/View";
 import TileLayer from "ol/layer/Tile";
 import OSM from "ol/source/OSM";
 import { fromLonLat } from "ol/proj";
-import ZoneLayer from "./ZoneLayer";
+import axios from "axios";
+import { createZoneLayer } from "./ZoneLayer";
 import { Style, Fill, Stroke } from "ol/style";
 
 const hoverStyle = new Style({
@@ -14,61 +15,57 @@ const hoverStyle = new Style({
 
 const MapView = () => {
   useEffect(() => {
-    const zoneLayer = ZoneLayer();
+    let map;
 
-    const map = new Map({
-      target: "map",
-      layers: [
-        new TileLayer({
-          source: new OSM(),
+    axios.get("http://localhost:5000/api/zones").then((res) => {
+      const zoneLayer = createZoneLayer(res.data);
+
+      map = new Map({
+        target: "map",
+        layers: [
+          new TileLayer({ source: new OSM() }),
+          zoneLayer,
+        ],
+        view: new View({
+          center: fromLonLat([72.8777, 19.0760]),
+          zoom: 12,
         }),
-        zoneLayer,
-      ],
-      view: new View({ center: fromLonLat([72.8777, 19.0760]),
-        zoom: 12,
-      }),
+      });
+
+      let hoveredFeature = null;
+
+      map.on("pointermove", (event) => {
+        const feature = map.forEachFeatureAtPixel(event.pixel, (f) => f);
+
+        if (hoveredFeature && hoveredFeature !== feature) {
+          hoveredFeature.setStyle(undefined);
+          hoveredFeature = null;
+        }
+
+        if (feature) {
+          hoveredFeature = feature;
+          feature.setStyle(hoverStyle);
+          map.getTargetElement().style.cursor = "pointer";
+        } else {
+          map.getTargetElement().style.cursor = "";
+        }
+      });
+
+      map.on("singleclick", (event) => {
+        const feature = map.forEachFeatureAtPixel(event.pixel, (f) => f);
+        if (feature) {
+          console.log("Clicked Zone:", feature.get("name"));
+        }
+      });
     });
 
-    let hoveredFeature = null;
-
-    // 🟡 Hover interaction
-    map.on("pointermove", (event) => {
-      const feature = map.forEachFeatureAtPixel(
-        event.pixel,
-        (feat) => feat
-      );
-
-      if (hoveredFeature && hoveredFeature !== feature) {
-        hoveredFeature.setStyle(undefined);
-        hoveredFeature = null;
-      }
-
-      if (feature) {
-        hoveredFeature = feature;
-        feature.setStyle(hoverStyle);
-        map.getTargetElement().style.cursor = "pointer";
-      } else {
-        map.getTargetElement().style.cursor = "";
-      }
-    });
-
-    // 🔵 Click interaction
-    map.on("singleclick", (event) => {
-      const feature = map.forEachFeatureAtPixel(
-        event.pixel,
-        (feat) => feat
-      );
-
-      if (feature) {
-        const zoneName = feature.get("name");
-        console.log("Clicked Zone:", zoneName);
-      }
-    });
-
-    return () => map.setTarget(null);
+    return () => {
+      if (map) map.setTarget(null);
+    };
   }, []);
 
   return null;
 };
 
 export default MapView;
+frontend/src/components/Map frontend/src/main.jsx
