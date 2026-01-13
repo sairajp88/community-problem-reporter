@@ -12,5 +12,6 @@ app.get("/api/health", (req, res) => {
 
 // 🔥 Zone APIs
 app.use("/api/zones", require("./routes/zoneRoutes"));
+app.use("/api/auth", require("./routes/authRoutes"));
 
 module.exports = app;
