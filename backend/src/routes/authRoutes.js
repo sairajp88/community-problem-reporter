@@ -55,5 +55,57 @@ router.post("/signup", async (req, res) => {
   res.status(500).json({ message: err.message });
 }
 });
+/**
+ * Login validation schema
+ */
+const loginSchema = z.object({
+  email: z.string().email(),
+  password: z.string().min(6),
+});
+
+/**
+ * POST /api/auth/login
+ */
+router.post("/login", async (req, res) => {
+  try {
+    // 1️⃣ Validate input
+    const data = loginSchema.parse(req.body);
+
+    // 2️⃣ Find user & explicitly include password
+    const user = await User.findOne({ email: data.email }).select("+password");
+    if (!user) {
+      return res.status(401).json({ message: "Invalid credentials" });
+    }
+
+    // 3️⃣ Compare password
+    const isMatch = await user.comparePassword(data.password);
+    if (!isMatch) {
+      return res.status(401).json({ message: "Invalid credentials" });
+    }
+
+    // 4️⃣ Generate token
+    const token = generateToken(user);
+
+    // 5️⃣ Respond
+    res.json({
+      user: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+      },
+      token,
+    });
+  } catch (err) {
+    console.error("LOGIN ERROR:", err);
+
+    if (err.name === "ZodError") {
+      return res.status(400).json({ message: err.errors });
+    }
+
+    res.status(500).json({ message: "Login failed" });
+  }
+});
+
 
 module.exports = router;
