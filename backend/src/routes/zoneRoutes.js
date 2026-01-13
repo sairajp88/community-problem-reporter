@@ -1,31 +1,28 @@
 const express = require("express");
 const Zone = require("../models/Zone");
+const { protect, authorize } = require("../middleware/authMiddleware");
 
 const router = express.Router();
 
 /**
- * @route   POST /api/zones
- * @desc    Create a new zone
+ * GET /api/zones
+ * Access: Any authenticated user
  */
-router.post("/", async (req, res) => {
-  try {
-    const zone = await Zone.create(req.body);
-    res.status(201).json(zone);
-  } catch (error) {
-    res.status(400).json({ message: error.message });
-  }
+router.get("/", protect, async (req, res) => {
+  const zones = await Zone.find();
+  res.json(zones);
 });
 
 /**
- * @route   GET /api/zones
- * @desc    Get all zones
+ * POST /api/zones
+ * Access: Admin only
  */
-router.get("/", async (req, res) => {
+router.post("/", protect, authorize("admin"), async (req, res) => {
   try {
-    const zones = await Zone.find();
-    res.json(zones);
-  } catch (error) {
-    res.status(500).json({ message: error.message });
+    const zone = await Zone.create(req.body);
+    res.status(201).json(zone);
+  } catch (e) {
+    res.status(400).json({ message: e.message });
   }
 });
 
