@@ -1,6 +1,6 @@
 import mongoose from "mongoose";
 
-const issueSchema = new mongoose.Schema(
+const IssueSchema = new mongoose.Schema(
   {
     title: {
       type: String,
@@ -15,8 +15,19 @@ const issueSchema = new mongoose.Schema(
 
     category: {
       type: String,
-      enum: ["road", "garbage", "water", "electricity", "other"],
-      default: "other",
+      default: "general",
+    },
+
+    severity: {
+      type: String,
+      enum: ["normal", "emergency"],
+      default: "normal",
+    },
+
+    status: {
+      type: String,
+      enum: ["open", "in-progress", "resolved"],
+      default: "open",
     },
 
     location: {
@@ -43,35 +54,17 @@ const issueSchema = new mongoose.Schema(
       },
     ],
 
-    status: {
-      type: String,
-      enum: ["open", "in-progress", "resolved"],
-      default: "open",
-    },
-
-    severity: {
-      type: String,
-      enum: ["normal", "emergency"],
-      default: "normal",
-    },
-
     createdBy: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
       required: true,
     },
   },
-  {
-    timestamps: true,
-  }
+  { timestamps: true }
 );
 
-// Geo index for map queries
-issueSchema.index({ location: "2dsphere" });
+// 🔥 Required for geo queries
+IssueSchema.index({ location: "2dsphere" });
 
-// Fast zone filtering
-issueSchema.index({ zone: 1 });
-
-const Issue = mongoose.model("Issue", issueSchema);
-
+const Issue = mongoose.model("Issue", IssueSchema);
 export default Issue;
