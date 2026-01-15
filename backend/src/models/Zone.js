@@ -1,4 +1,4 @@
-const mongoose = require("mongoose");
+import mongoose from "mongoose";
 
 const ZoneSchema = new mongoose.Schema(
   {
@@ -27,7 +27,7 @@ const ZoneSchema = new mongoose.Schema(
         required: true,
       },
       coordinates: {
-        type: [[[Number]]], // GeoJSON Polygon
+        type: [[[Number]]],
         required: true,
       },
     },
@@ -35,16 +35,14 @@ const ZoneSchema = new mongoose.Schema(
     inCharges: [
       {
         type: mongoose.Schema.Types.ObjectId,
-        ref: "User", // future sprint
+        ref: "User",
       },
     ],
   },
-  {
-    timestamps: true,
-  }
+  { timestamps: true }
 );
 
-// 🔥 REQUIRED for geospatial queries
 ZoneSchema.index({ geometry: "2dsphere" });
 
-module.exports = mongoose.model("Zone", ZoneSchema);
+const Zone = mongoose.model("Zone", ZoneSchema);
+export default Zone;

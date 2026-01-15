@@ -1,5 +1,9 @@
-const express = require("express");
-const cors = require("cors");
+import express from "express";
+import cors from "cors";
+
+import zoneRoutes from "./routes/zoneRoutes.js";
+import authRoutes from "./routes/authRoutes.js";
+import issueRoutes from "./routes/issueRoutes.js";
 
 const app = express();
 
@@ -10,8 +14,8 @@ app.get("/api/health", (req, res) => {
   res.json({ status: "Backend is running" });
 });
 
-// 🔥 Zone APIs
-app.use("/api/zones", require("./routes/zoneRoutes"));
-app.use("/api/auth", require("./routes/authRoutes"));
+app.use("/api/zones", zoneRoutes);
+app.use("/api/auth", authRoutes);
+app.use("/api/issues", issueRoutes);
 
-module.exports = app;
+export default app;

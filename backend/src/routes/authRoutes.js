@@ -1,41 +1,34 @@
-const express = require("express");
-const User = require("../models/User");
-const { generateToken } = require("../utils/jwt");
-const { z } = require("zod");
+import express from "express";
+import User from "../models/User.js";
+import { generateToken } from "../utils/jwt.js";
+import { z } from "zod";
 
 const router = express.Router();
 
-/**
- * Signup validation schema
- */
 const signupSchema = z.object({
   name: z.string().min(2),
   email: z.string().email(),
   password: z.string().min(6),
-  role: z.enum(["admin", "zone_manager", "subzone_manager", "resident"]).optional(),
+  role: z.enum([
+    "admin",
+    "zone_manager",
+    "subzone_manager",
+    "resident",
+  ]).optional(),
 });
 
-/**
- * POST /api/auth/signup
- */
 router.post("/signup", async (req, res) => {
   try {
-    // 1️⃣ Validate input
     const data = signupSchema.parse(req.body);
 
-    // 2️⃣ Check if user already exists
     const existingUser = await User.findOne({ email: data.email });
     if (existingUser) {
       return res.status(400).json({ message: "User already exists" });
     }
 
-    // 3️⃣ Create user (password is hashed automatically)
     const user = await User.create(data);
-
-    // 4️⃣ Generate JWT
     const token = generateToken(user);
 
-    // 5️⃣ Respond
     res.status(201).json({
       user: {
         id: user._id,
@@ -46,47 +39,34 @@ router.post("/signup", async (req, res) => {
       token,
     });
   } catch (err) {
-  console.error("SIGNUP ERROR:", err);
-
-  if (err.name === "ZodError") {
-    return res.status(400).json({ message: err.errors });
+    if (err.name === "ZodError") {
+      return res.status(400).json({ message: err.errors });
+    }
+    res.status(500).json({ message: err.message });
   }
-
-  res.status(500).json({ message: err.message });
-}
 });
-/**
- * Login validation schema
- */
+
 const loginSchema = z.object({
   email: z.string().email(),
   password: z.string().min(6),
 });
 
-/**
- * POST /api/auth/login
- */
 router.post("/login", async (req, res) => {
   try {
-    // 1️⃣ Validate input
     const data = loginSchema.parse(req.body);
 
-    // 2️⃣ Find user & explicitly include password
     const user = await User.findOne({ email: data.email }).select("+password");
     if (!user) {
       return res.status(401).json({ message: "Invalid credentials" });
     }
 
-    // 3️⃣ Compare password
     const isMatch = await user.comparePassword(data.password);
     if (!isMatch) {
       return res.status(401).json({ message: "Invalid credentials" });
     }
 
-    // 4️⃣ Generate token
     const token = generateToken(user);
 
-    // 5️⃣ Respond
     res.json({
       user: {
         id: user._id,
@@ -97,15 +77,11 @@ router.post("/login", async (req, res) => {
       token,
     });
   } catch (err) {
-    console.error("LOGIN ERROR:", err);
-
     if (err.name === "ZodError") {
       return res.status(400).json({ message: err.errors });
     }
-
     res.status(500).json({ message: "Login failed" });
   }
 });
 
-
-module.exports = router;
+export default router;

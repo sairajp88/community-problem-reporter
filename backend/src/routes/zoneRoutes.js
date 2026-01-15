@@ -1,6 +1,6 @@
-const express = require("express");
-const Zone = require("../models/Zone");
-const { protect, authorize } = require("../middleware/authMiddleware");
+import express from "express";
+import Zone from "../models/Zone.js";
+import { protect, authorize } from "../middleware/authMiddleware.js";
 
 const router = express.Router();
 
@@ -9,8 +9,12 @@ const router = express.Router();
  * Access: Any authenticated user
  */
 router.get("/", protect, async (req, res) => {
-  const zones = await Zone.find();
-  res.json(zones);
+  try {
+    const zones = await Zone.find();
+    res.json(zones);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
 });
 
 /**
@@ -21,9 +25,9 @@ router.post("/", protect, authorize("admin"), async (req, res) => {
   try {
     const zone = await Zone.create(req.body);
     res.status(201).json(zone);
-  } catch (e) {
-    res.status(400).json({ message: e.message });
+  } catch (error) {
+    res.status(400).json({ message: error.message });
   }
 });
 
-module.exports = router;
+export default router;
