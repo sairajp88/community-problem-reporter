@@ -70,3 +70,44 @@ export const createIssue = async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 };
+/**
+ * GET /api/issues
+ * Admin → all issues
+ * Others → assigned zones
+ */
+export const getIssues = async (req, res) => {
+  try {
+    let filter = {};
+
+    if (req.user.role !== "admin") {
+      filter.zone = { $in: req.user.assignedZones || [] };
+    }
+
+    const issues = await Issue.find(filter)
+      .populate("zone", "name level")
+      .populate("createdBy", "name role");
+
+    res.json(issues);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+/**
+ * GET /api/issues/:id
+ */
+export const getIssueById = async (req, res) => {
+  try {
+    const issue = await Issue.findById(req.params.id)
+      .populate("zone", "name level")
+      .populate("createdBy", "name role");
+
+    if (!issue) {
+      return res.status(404).json({ message: "Issue not found" });
+    }
+
+    res.json(issue);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
