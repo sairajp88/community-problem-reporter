@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import Map from "ol/Map";
 import View from "ol/View";
 import TileLayer from "ol/layer/Tile";
@@ -6,6 +6,7 @@ import OSM from "ol/source/OSM";
 import { fromLonLat } from "ol/proj";
 import axios from "axios";
 import { createZoneLayer } from "./ZoneLayer";
+import createIssueLayer from "./IssueLayer";
 import { Style, Fill, Stroke } from "ol/style";
 
 const hoverStyle = new Style({
@@ -13,7 +14,11 @@ const hoverStyle = new Style({
   stroke: new Stroke({ color: "#ff0000", width: 3 }),
 });
 
-const MapView = () => {
+const MapView = ({ issues }) => {
+  const mapRef = useRef(null);
+  const issueLayerRef = useRef(null);
+
+  // Initialize map once
   useEffect(() => {
     let map;
 
@@ -27,10 +32,12 @@ const MapView = () => {
           zoneLayer,
         ],
         view: new View({
-          center: fromLonLat([72.8777, 19.0760]),
+          center: fromLonLat([72.8777, 19.076]),
           zoom: 12,
         }),
       });
+
+      mapRef.current = map;
 
       let hoveredFeature = null;
 
@@ -50,19 +57,26 @@ const MapView = () => {
           map.getTargetElement().style.cursor = "";
         }
       });
-
-      map.on("singleclick", (event) => {
-        const feature = map.forEachFeatureAtPixel(event.pixel, (f) => f);
-        if (feature) {
-          console.log("Clicked Zone:", feature.get("name"));
-        }
-      });
     });
 
     return () => {
       if (map) map.setTarget(null);
     };
   }, []);
+
+  // Update issue layer when issues change
+  useEffect(() => {
+    if (!mapRef.current) return;
+
+    // Remove old issue layer
+    if (issueLayerRef.current) {
+      mapRef.current.removeLayer(issueLayerRef.current);
+    }
+
+    const issueLayer = createIssueLayer(issues);
+    mapRef.current.addLayer(issueLayer);
+    issueLayerRef.current = issueLayer;
+  }, [issues]);
 
   return null;
 };
