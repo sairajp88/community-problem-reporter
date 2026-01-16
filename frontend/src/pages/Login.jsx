@@ -1,64 +1,108 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import axios from "axios";
-import { useAuth } from "../context/AuthContext";
-import { useNavigate } from "react-router-dom";
+import DashboardLayout from "../../components/layout/DashboardLayout";
+import StatusBadge from "../../components/ui/StatusBadge";
+import SeverityBadge from "../../components/ui/SeverityBadge";
+import IssuePopup from "../../components/IssuePopup";
 
-const Login = () => {
-  const { login } = useAuth();
-  const navigate = useNavigate();
+const ResidentDashboard = () => {
+  const [issues, setIssues] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [selectedIssue, setSelectedIssue] = useState(null);
 
-  const [form, setForm] = useState({
-    email: "",
-    password: "",
-  });
-  const [error, setError] = useState("");
+  useEffect(() => {
+    const fetchIssues = async () => {
+      try {
+        const token = localStorage.getItem("token");
 
-  const submit = async (e) => {
-    e.preventDefault();
-    setError("");
+        const res = await axios.get("http://localhost:5000/api/issues", {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
 
-    try {
-      const res = await axios.post(
-        "http://localhost:5000/api/auth/login",
-        form
-      );
+        setIssues(res.data);
+      } catch {
+        setError("Failed to load your issues");
+      } finally {
+        setLoading(false);
+      }
+    };
 
-      login(res.data.user, res.data.token);
-      navigate("/");
-    } catch (err) {
-      setError(err.response?.data?.message || "Login failed");
-    }
-  };
+    fetchIssues();
+  }, []);
+
+  if (loading) {
+    return (
+      <DashboardLayout title="My Issues">
+        <p className="text-gray-500">Loading your issues…</p>
+      </DashboardLayout>
+    );
+  }
+
+  if (error) {
+    return (
+      <DashboardLayout title="My Issues">
+        <p className="text-red-600">{error}</p>
+      </DashboardLayout>
+    );
+  }
 
   return (
-    <div className="max-w-md mx-auto mt-10">
-      <h2 className="text-2xl font-bold mb-4">Login</h2>
+    <DashboardLayout title="My Issues">
+      {issues.length === 0 ? (
+        <p className="text-gray-500">
+          You haven’t reported any issues yet.
+        </p>
+      ) : (
+        <div className="overflow-x-auto">
+          <table className="min-w-full bg-white border rounded shadow-sm">
+            <thead className="bg-gray-100 text-left">
+              <tr>
+                <th className="p-3 border-b">Title</th>
+                <th className="p-3 border-b">Status</th>
+                <th className="p-3 border-b">Severity</th>
+                <th className="p-3 border-b">Action</th>
+              </tr>
+            </thead>
 
-      {error && <p className="text-red-500 mb-2">{error}</p>}
+            <tbody>
+              {issues.map((issue) => (
+                <tr key={issue._id} className="hover:bg-gray-50">
+                  <td className="p-3 border-b">{issue.title}</td>
 
-      <form onSubmit={submit} className="space-y-3">
-        <input
-          type="email"
-          placeholder="Email"
-          className="w-full border p-2"
-          value={form.email}
-          onChange={(e) => setForm({ ...form, email: e.target.value })}
+                  <td className="p-3 border-b">
+                    <StatusBadge status={issue.status} />
+                  </td>
+
+                  <td className="p-3 border-b">
+                    <SeverityBadge severity={issue.severity} />
+                  </td>
+
+                  <td className="p-3 border-b">
+                    <button
+                      onClick={() => setSelectedIssue(issue)}
+                      className="px-3 py-1 text-sm bg-blue-600 text-white rounded hover:bg-blue-700"
+                    >
+                      View
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {selectedIssue && (
+        <IssuePopup
+          issue={selectedIssue}
+          onClose={() => setSelectedIssue(null)}
         />
-
-        <input
-          type="password"
-          placeholder="Password"
-          className="w-full border p-2"
-          value={form.password}
-          onChange={(e) => setForm({ ...form, password: e.target.value })}
-        />
-
-        <button className="w-full bg-blue-600 text-white p-2">
-          Login
-        </button>
-      </form>
-    </div>
+      )}
+    </DashboardLayout>
   );
 };
 
-export default Login;
+export default ResidentDashboard;

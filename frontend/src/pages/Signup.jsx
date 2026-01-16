@@ -1,81 +1,99 @@
 import { useState } from "react";
 import axios from "axios";
-import { useAuth } from "../context/AuthContext";
 import { useNavigate } from "react-router-dom";
 
 const Signup = () => {
-  const { login } = useAuth();
   const navigate = useNavigate();
 
-  const [form, setForm] = useState({
-    name: "",
-    email: "",
-    password: "",
-    role: "resident",
-  });
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  const submit = async (e) => {
+  const submitHandler = async (e) => {
     e.preventDefault();
     setError("");
+    setLoading(true);
 
     try {
-      const res = await axios.post(
-        "http://localhost:5000/api/auth/signup",
-        form
-      );
+      await axios.post("http://localhost:5000/api/auth/signup", {
+        name,
+        email,
+        password,
+      });
 
-      login(res.data.user, res.data.token);
-      navigate("/");
+      navigate("/login");
     } catch (err) {
-      setError(err.response?.data?.message || "Signup failed");
+      setError(
+        err.response?.data?.message || "Signup failed"
+      );
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
-    <div className="max-w-md mx-auto mt-10">
-      <h2 className="text-2xl font-bold mb-4">Signup</h2>
+    <div className="min-h-screen flex items-center justify-center bg-gray-100">
+      <div className="bg-white p-6 rounded shadow w-96">
+        <h2 className="text-xl font-semibold text-center mb-4">
+          Create Account
+        </h2>
 
-      {error && <p className="text-red-500 mb-2">{error}</p>}
+        <form onSubmit={submitHandler} className="space-y-4">
+          {error && (
+            <div className="text-red-600 text-sm text-center">
+              {error}
+            </div>
+          )}
 
-      <form onSubmit={submit} className="space-y-3">
-        <input
-          placeholder="Name"
-          className="w-full border p-2"
-          value={form.name}
-          onChange={(e) => setForm({ ...form, name: e.target.value })}
-        />
+          <input
+            type="text"
+            placeholder="Full Name"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            required
+            className="w-full border rounded px-3 py-2"
+          />
 
-        <input
-          type="email"
-          placeholder="Email"
-          className="w-full border p-2"
-          value={form.email}
-          onChange={(e) => setForm({ ...form, email: e.target.value })}
-        />
+          <input
+            type="email"
+            placeholder="Email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            required
+            className="w-full border rounded px-3 py-2"
+          />
 
-        <input
-          type="password"
-          placeholder="Password"
-          className="w-full border p-2"
-          value={form.password}
-          onChange={(e) => setForm({ ...form, password: e.target.value })}
-        />
+          <input
+            type="password"
+            placeholder="Password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            required
+            className="w-full border rounded px-3 py-2"
+          />
 
-        <select
-          className="w-full border p-2"
-          value={form.role}
-          onChange={(e) => setForm({ ...form, role: e.target.value })}
-        >
-          <option value="resident">Resident</option>
-          <option value="zone_manager">Zone Manager</option>
-          <option value="admin">Admin</option>
-        </select>
+          <button
+            type="submit"
+            disabled={loading}
+            className={`w-full py-2 rounded text-white ${
+              loading
+                ? "bg-gray-400 cursor-not-allowed"
+                : "bg-green-600 hover:bg-green-700"
+            }`}
+          >
+            {loading ? "Creating account..." : "Sign up"}
+          </button>
+        </form>
 
-        <button className="w-full bg-green-600 text-white p-2">
-          Signup
-        </button>
-      </form>
+        <p className="text-sm text-center mt-4">
+          Already have an account?{" "}
+          <a href="/login" className="text-blue-600 hover:underline">
+            Login
+          </a>
+        </p>
+      </div>
     </div>
   );
 };
