@@ -1,42 +1,27 @@
-import { BrowserRouter, Routes, Route } from "react-router-dom";
-
+import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
 import Home from "./pages/Home";
-import Login from "./pages/Login";
-import Signup from "./pages/Signup";
-import AdminZones from "./pages/AdminZones";
+import Dashboard from "./pages/Dashboard";
+import { useAuth } from "./context/AuthContext";
 
-import ProtectedRoute from "./components/ProtectedRoute";
+const App = () => {
+  const { isAuthenticated, loading } = useAuth();
 
-function App() {
+  if (loading) return null;
+
   return (
-    <BrowserRouter>
+    <Router>
       <Routes>
-        {/* Protected Home (all logged-in users) */}
-        <Route
-          path="/"
-          element={
-            <ProtectedRoute>
-              <Home />
-            </ProtectedRoute>
-          }
-        />
+        <Route path="/" element={<Home />} />
 
-        {/* Auth Pages */}
-        <Route path="/login" element={<Login />} />
-        <Route path="/signup" element={<Signup />} />
-
-        {/* Admin-only Route */}
         <Route
-          path="/admin/zones"
+          path="/dashboard/*"
           element={
-            <ProtectedRoute roles={["admin"]}>
-              <AdminZones />
-            </ProtectedRoute>
+            isAuthenticated ? <Dashboard /> : <Navigate to="/" replace />
           }
         />
       </Routes>
-    </BrowserRouter>
+    </Router>
   );
-}
+};
 
 export default App;
