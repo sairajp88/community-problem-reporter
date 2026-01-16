@@ -8,17 +8,19 @@ const createIssueLayer = (issues) => {
   const features = issues.map((issue) => {
     const feature = new Feature({
       geometry: new Point(issue.location.coordinates),
-      issue,
     });
+
+    // 🔴 CRITICAL FOR SPRINT 5
+    feature.set("issue", issue);
 
     const color = issue.severity === "emergency" ? "red" : "blue";
 
     feature.setStyle(
       new Style({
         image: new CircleStyle({
-          radius:6,
+          radius: 12,
           fill: new Fill({ color }),
-          stroke: new Stroke({ color: "white", width: 1 }),
+          stroke: new Stroke({ color: "white", width: 2 }),
         }),
       })
     );
