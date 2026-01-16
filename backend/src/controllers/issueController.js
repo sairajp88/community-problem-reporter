@@ -2,6 +2,8 @@ import Issue from "../models/Issue.js";
 import Zone from "../models/Zone.js";
 import uploadToCloudinary from "../utils/uploadToCloudinary.js";
 import { booleanPointInPolygon } from "@turf/turf";
+import mongoose from "mongoose";
+import { io } from "../server.js";
 
 /**
  * POST /api/issues
@@ -65,11 +67,20 @@ export const createIssue = async (req, res) => {
       createdBy: req.user._id,
     });
 
+    // 🔔 REAL-TIME: new issue
+    io.to(`zone:${issue.zone}`).emit("issue:new", issue);
+
+    // 🔔 REAL-TIME: emergency alert
+    if (issue.severity === "emergency") {
+      io.to("admin").emit("issue:emergency", issue);
+    }
+
     res.status(201).json(issue);
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
 };
+
 /**
  * GET /api/issues
  * Admin → all issues
@@ -98,6 +109,10 @@ export const getIssues = async (req, res) => {
  */
 export const getIssueById = async (req, res) => {
   try {
+    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+      return res.status(400).json({ message: "Invalid issue id" });
+    }
+
     const issue = await Issue.findById(req.params.id)
       .populate("zone", "name level")
       .populate("createdBy", "name role");
@@ -111,39 +126,69 @@ export const getIssueById = async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 };
+
+/**
+ * POST /api/issues/:id/comments
+ */
 export const addComment = async (req, res) => {
-  const { text } = req.body;
+  try {
+    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+      return res.status(400).json({ message: "Invalid issue id" });
+    }
 
-  if (!text) {
-    return res.status(400).json({ message: "Comment text required" });
+    const { text } = req.body;
+
+    if (!text) {
+      return res.status(400).json({ message: "Comment text required" });
+    }
+
+    const issue = await Issue.findById(req.params.id);
+
+    if (!issue) {
+      return res.status(404).json({ message: "Issue not found" });
+    }
+
+    issue.comments.push({
+      user: req.user._id,
+      text,
+    });
+
+    await issue.save();
+
+    const newComment = issue.comments[issue.comments.length - 1];
+
+    // 🔔 REAL-TIME: new comment
+    io.to(`zone:${issue.zone}`).emit("comment:new", {
+      issueId: issue._id,
+      comment: newComment,
+    });
+
+    res.status(201).json(issue.comments);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
   }
-
-  const issue = await Issue.findById(req.params.id);
-
-  if (!issue) {
-    return res.status(404).json({ message: "Issue not found" });
-  }
-
-  issue.comments.push({
-    user: req.user._id,
-    text,
-  });
-
-  await issue.save();
-
-  res.status(201).json(issue.comments);
 };
 
+/**
+ * GET /api/issues/:id/comments
+ */
 export const getComments = async (req, res) => {
-  const issue = await Issue.findById(req.params.id).populate(
-    "comments.user",
-    "name"
-  );
+  try {
+    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+      return res.status(400).json({ message: "Invalid issue id" });
+    }
 
-  if (!issue) {
-    return res.status(404).json({ message: "Issue not found" });
+    const issue = await Issue.findById(req.params.id).populate(
+      "comments.user",
+      "name"
+    );
+
+    if (!issue) {
+      return res.status(404).json({ message: "Issue not found" });
+    }
+
+    res.json(issue.comments);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
   }
-
-  res.json(issue.comments);
 };
-
