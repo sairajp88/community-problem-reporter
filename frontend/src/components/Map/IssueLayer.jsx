@@ -28,9 +28,11 @@ const createIssueLayer = (issues) => {
     return feature;
   });
 
-  return new VectorLayer({
-    source: new VectorSource({ features }),
-  });
+return new VectorLayer({
+  source: new VectorSource({ features }),
+  zIndex: 10, // 🔴 FORCE ABOVE ZONES
+});
+
 };
 
 export default createIssueLayer;
