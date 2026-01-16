@@ -1,6 +1,6 @@
 import { useState } from "react";
 import axios from "axios";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 
 const Signup = () => {
   const navigate = useNavigate();
@@ -8,6 +8,7 @@ const Signup = () => {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [role, setRole] = useState("resident");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -21,13 +22,12 @@ const Signup = () => {
         name,
         email,
         password,
+        role,
       });
 
       navigate("/login");
     } catch (err) {
-      setError(
-        err.response?.data?.message || "Signup failed"
-      );
+      setError(err.response?.data?.message || "Signup failed");
     } finally {
       setLoading(false);
     }
@@ -42,9 +42,7 @@ const Signup = () => {
 
         <form onSubmit={submitHandler} className="space-y-4">
           {error && (
-            <div className="text-red-600 text-sm text-center">
-              {error}
-            </div>
+            <p className="text-red-600 text-sm text-center">{error}</p>
           )}
 
           <input
@@ -74,6 +72,16 @@ const Signup = () => {
             className="w-full border rounded px-3 py-2"
           />
 
+          {/* ROLE SELECTION */}
+          <select
+            value={role}
+            onChange={(e) => setRole(e.target.value)}
+            className="w-full border rounded px-3 py-2"
+          >
+            <option value="resident">Resident</option>
+            <option value="zone_manager">Zone Manager</option>
+          </select>
+
           <button
             type="submit"
             disabled={loading}
@@ -89,9 +97,9 @@ const Signup = () => {
 
         <p className="text-sm text-center mt-4">
           Already have an account?{" "}
-          <a href="/login" className="text-blue-600 hover:underline">
+          <Link to="/login" className="text-blue-600 hover:underline">
             Login
-          </a>
+          </Link>
         </p>
       </div>
     </div>

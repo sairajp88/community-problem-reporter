@@ -1,64 +1,33 @@
 import { useEffect, useState } from "react";
 import axios from "axios";
 import MapView from "../components/Map/MapView";
-import socket from "../socket";
+import { Link } from "react-router-dom";
 
 const Home = () => {
   const [issues, setIssues] = useState([]);
 
   useEffect(() => {
-    const fetchIssues = async () => {
-      const token = localStorage.getItem("token");
-
-      const res = await axios.get("http://localhost:5000/api/issues", {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-
+    axios.get("http://localhost:5000/api/issues").then((res) => {
       setIssues(res.data);
-    };
-
-    fetchIssues();
-
-    // 🔌 CONNECT SOCKET
-    socket.connect();
-
-    // 🔔 New issue
-    socket.on("issue:new", (issue) => {
-      setIssues((prev) => [...prev, issue]);
     });
-
-    // 🚨 Emergency issue
-    socket.on("issue:emergency", (issue) => {
-      alert("🚨 Emergency issue reported!");
-      setIssues((prev) => [...prev, issue]);
-    });
-
-    // 🔄 Status update
-    socket.on("issue:status", ({ issueId, status }) => {
-      setIssues((prev) =>
-        prev.map((i) =>
-          i._id === issueId ? { ...i, status } : i
-        )
-      );
-    });
-
-    return () => {
-      socket.off("issue:new");
-      socket.off("issue:emergency");
-      socket.off("issue:status");
-      socket.disconnect();
-    };
   }, []);
 
   return (
-    <div style={{ width: "100vw", height: "100vh" }}>
-      <h1 style={{ textAlign: "center", padding: "10px" }}>
-        Community Problem Reporter
-      </h1>
+    <div className="h-screen flex flex-col">
+      {/* Header */}
+      <header className="flex justify-between items-center px-6 py-3 bg-white shadow">
+        <h1 className="font-semibold text-lg">
+          Community Problem Reporter
+        </h1>
 
-      <div style={{ width: "100%", height: "90vh" }}>
+        <div className="space-x-4">
+          <Link to="/login" className="text-blue-600">Login</Link>
+          <Link to="/signup" className="text-blue-600">Signup</Link>
+        </div>
+      </header>
+
+      {/* Map */}
+      <div className="flex-1">
         <MapView issues={issues} />
       </div>
     </div>
