@@ -1,11 +1,13 @@
 import { useEffect, useState } from "react";
 import axios from "axios";
+import socket from "../socket";
 
 const IssuePopup = ({ issue, onClose }) => {
   const [comments, setComments] = useState([]);
   const [text, setText] = useState("");
   const [loading, setLoading] = useState(false);
 
+  // 🔁 Fetch comments on open
   useEffect(() => {
     if (!issue) return;
 
@@ -27,6 +29,23 @@ const IssuePopup = ({ issue, onClose }) => {
     fetchComments();
   }, [issue]);
 
+  // 🔔 Live comments
+  useEffect(() => {
+    if (!issue) return;
+
+    const handler = ({ issueId, comment }) => {
+      if (issueId === issue._id) {
+        setComments((prev) => [...prev, comment]);
+      }
+    };
+
+    socket.on("comment:new", handler);
+
+    return () => {
+      socket.off("comment:new", handler);
+    };
+  }, [issue]);
+
   const submitComment = async () => {
     if (!text.trim()) return;
 
@@ -45,18 +64,7 @@ const IssuePopup = ({ issue, onClose }) => {
 
     setText("");
     setLoading(false);
-
-    // Re-fetch comments
-    const res = await axios.get(
-      `http://localhost:5000/api/issues/${issue._id}/comments`,
-      {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      }
-    );
-
-    setComments(res.data);
+    // ⚠️ No refetch needed — socket will update
   };
 
   if (!issue) return null;
@@ -128,7 +136,7 @@ const IssuePopup = ({ issue, onClose }) => {
               fontSize: 13,
             }}
           >
-            <strong>{c.user.name}</strong>
+            <strong>{c.user?.name || "User"}</strong>
             <div>{c.text}</div>
           </div>
         ))}
