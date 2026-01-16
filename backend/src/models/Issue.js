@@ -37,7 +37,7 @@ const IssueSchema = new mongoose.Schema(
         required: true,
       },
       coordinates: {
-        type: [Number], // [lng, lat]
+        type: [Number],
         required: true,
       },
     },
@@ -50,7 +50,7 @@ const IssueSchema = new mongoose.Schema(
 
     images: [
       {
-        type: String, // Cloudinary URLs
+        type: String,
       },
     ],
 
@@ -59,11 +59,29 @@ const IssueSchema = new mongoose.Schema(
       ref: "User",
       required: true,
     },
+
+    comments: [
+      {
+        user: {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: "User",
+          required: true,
+        },
+        text: {
+          type: String,
+          required: true,
+          trim: true,
+        },
+        createdAt: {
+          type: Date,
+          default: Date.now,
+        },
+      },
+    ],
   },
   { timestamps: true }
 );
 
-// 🔥 Required for geo queries
 IssueSchema.index({ location: "2dsphere" });
 
 const Issue = mongoose.model("Issue", IssueSchema);

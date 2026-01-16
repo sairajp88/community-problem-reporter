@@ -111,3 +111,39 @@ export const getIssueById = async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 };
+export const addComment = async (req, res) => {
+  const { text } = req.body;
+
+  if (!text) {
+    return res.status(400).json({ message: "Comment text required" });
+  }
+
+  const issue = await Issue.findById(req.params.id);
+
+  if (!issue) {
+    return res.status(404).json({ message: "Issue not found" });
+  }
+
+  issue.comments.push({
+    user: req.user._id,
+    text,
+  });
+
+  await issue.save();
+
+  res.status(201).json(issue.comments);
+};
+
+export const getComments = async (req, res) => {
+  const issue = await Issue.findById(req.params.id).populate(
+    "comments.user",
+    "name"
+  );
+
+  if (!issue) {
+    return res.status(404).json({ message: "Issue not found" });
+  }
+
+  res.json(issue.comments);
+};
+
