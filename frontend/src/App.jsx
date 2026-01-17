@@ -2,7 +2,7 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-d
 import Home from "./pages/Home";
 import Login from "./pages/Login";
 import Signup from "./pages/Signup";
-import Dashboard from "./pages/Dashboard";
+import AppShell from "./pages/AppShell";
 import { useAuth } from "./context/AuthContext";
 
 const App = () => {
@@ -18,15 +18,15 @@ const App = () => {
         <Route path="/login" element={<Login />} />
         <Route path="/signup" element={<Signup />} />
 
-        {/* Protected */}
+        {/* New App Shell */}
         <Route
-          path="/dashboard/*"
+          path="/app/*"
           element={
-            isAuthenticated ? <Dashboard /> : <Navigate to="/login" replace />
+            isAuthenticated ? <AppShell /> : <Navigate to="/login" replace />
           }
         />
 
-        {/* Fallback */}
+        {/* Temporary fallback */}
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </Router>

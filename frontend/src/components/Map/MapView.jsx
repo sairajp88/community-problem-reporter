@@ -5,31 +5,35 @@ import TileLayer from "ol/layer/Tile";
 import OSM from "ol/source/OSM";
 import { fromLonLat } from "ol/proj";
 import axios from "axios";
+import { Style, Fill, Stroke } from "ol/style";
+
 import { createZoneLayer } from "./ZoneLayer";
 import createIssueLayer from "./IssueLayer";
-import { Style, Fill, Stroke } from "ol/style";
 import IssuePopup from "../IssuePopup";
 
 const hoverStyle = new Style({
-  fill: new Fill({ color: "rgba(255, 0, 0, 0.4)" }),
-  stroke: new Stroke({ color: "#ff0000", width: 3 }),
+  fill: new Fill({ color: "rgba(255, 0, 0, 0.3)" }),
+  stroke: new Stroke({ color: "#ff0000", width: 2 }),
 });
 
-const MapView = ({ issues }) => {
+const MapView = ({ issues = [] }) => {
   const mapRef = useRef(null);
+  const containerRef = useRef(null);
   const issueLayerRef = useRef(null);
-  const mapContainerRef = useRef(null);
   const [selectedIssue, setSelectedIssue] = useState(null);
 
-  // 🗺️ Initialize map ONCE
   useEffect(() => {
+    if (!containerRef.current) return;
+
     let map;
 
-    axios.get("http://localhost:5000/api/zones").then((res) => {
-      const zoneLayer = createZoneLayer(res.data);
+    const init = async () => {
+      const zonesRes = await axios.get("http://localhost:5000/api/zones");
+
+      const zoneLayer = createZoneLayer(zonesRes.data);
 
       map = new Map({
-        target: mapContainerRef.current,
+        target: containerRef.current,
         layers: [
           new TileLayer({ source: new OSM() }),
           zoneLayer,
@@ -42,48 +46,44 @@ const MapView = ({ issues }) => {
 
       mapRef.current = map;
 
-      let hoveredFeature = null;
-map.on("pointermove", (event) => {
-  const feature = map.forEachFeatureAtPixel(event.pixel, (f) => f);
+      // 🔥 FORCE SIZE AFTER DOM PAINT
+      requestAnimationFrame(() => {
+        map.updateSize();
+      });
 
-  // Reset previous hovered ZONE only
-  if (
-    hoveredFeature &&
-    hoveredFeature !== feature &&
-    !hoveredFeature.get("issue")
-  ) {
-    hoveredFeature.setStyle(undefined);
-    hoveredFeature = null;
-  }
-
-  // Apply hover ONLY to zones
-  if (feature && !feature.get("issue")) {
-    hoveredFeature = feature;
-    feature.setStyle(hoverStyle);
-    map.getTargetElement().style.cursor = "pointer";
-  } else {
-    map.getTargetElement().style.cursor = "";
-  }
-});
-
-
-      // 🟢 Click interaction (Sprint 5 Step 2)
       map.on("singleclick", (event) => {
         map.forEachFeatureAtPixel(event.pixel, (feature) => {
           const issue = feature.get("issue");
-          if (issue) {
-            setSelectedIssue(issue);
-          }
+          if (issue) setSelectedIssue(issue);
         });
       });
-    });
+
+      let hovered = null;
+      map.on("pointermove", (event) => {
+        const f = map.forEachFeatureAtPixel(event.pixel, (x) => x);
+
+        if (hovered && hovered !== f && !hovered.get("issue")) {
+          hovered.setStyle(undefined);
+          hovered = null;
+        }
+
+        if (f && !f.get("issue")) {
+          hovered = f;
+          f.setStyle(hoverStyle);
+          map.getTargetElement().style.cursor = "pointer";
+        } else {
+          map.getTargetElement().style.cursor = "";
+        }
+      });
+    };
+
+    init();
 
     return () => {
       if (map) map.setTarget(null);
     };
   }, []);
 
-  // 📍 Update issue layer when issues change
   useEffect(() => {
     if (!mapRef.current) return;
 
@@ -91,37 +91,25 @@ map.on("pointermove", (event) => {
       mapRef.current.removeLayer(issueLayerRef.current);
     }
 
-    const projectedIssues = issues.map((issue) => ({
-      ...issue,
+    if (!issues.length) return;
+
+    const projected = issues.map((i) => ({
+      ...i,
       location: {
-        ...issue.location,
-        coordinates: fromLonLat(issue.location.coordinates),
+        ...i.location,
+        coordinates: fromLonLat(i.location.coordinates),
       },
     }));
 
-    const issueLayer = createIssueLayer(projectedIssues);
-    mapRef.current.addLayer(issueLayer);
-    issueLayerRef.current = issueLayer;
-
-    // 🎯 Auto-focus if only one issue exists
-    if (projectedIssues.length === 1) {
-      mapRef.current.getView().animate({
-        center: projectedIssues[0].location.coordinates,
-        zoom: 17,
-        duration: 800,
-      });
-    }
+    const layer = createIssueLayer(projected);
+    mapRef.current.addLayer(layer);
+    issueLayerRef.current = layer;
   }, [issues]);
 
   return (
     <div style={{ width: "100%", height: "100%", position: "relative" }}>
-      {/* 🗺️ MAP CONTAINER */}
-      <div
-        ref={mapContainerRef}
-        style={{ width: "100%", height: "100%" }}
-      />
+      <div ref={containerRef} style={{ width: "100%", height: "100%" }} />
 
-      {/* 🧾 ISSUE POPUP */}
       <IssuePopup
         issue={selectedIssue}
         onClose={() => setSelectedIssue(null)}
