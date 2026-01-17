@@ -4,8 +4,6 @@ import { useAuth } from "../context/AuthContext";
 
 import MapView from "../components/Map/MapView";
 import ResidentPanel from "../components/panels/ResidentPanel";
-import ReportIssueFAB from "../components/ui/ReportIssueFAB";
-import ReportIssueModal from "../components/modals/ReportIssueModal";
 
 const HEADER_HEIGHT = 56;
 
@@ -14,8 +12,10 @@ const AppShell = () => {
 
   const [issues, setIssues] = useState([]);
   const [focusedIssue, setFocusedIssue] = useState(null);
-  const [showReportModal, setShowReportModal] = useState(false);
-  const [reportLocation, setReportLocation] = useState(null);
+
+  // 🟦 PHASE 2 STATE
+  const [pinMode, setPinMode] = useState(false);
+  const [draftPin, setDraftPin] = useState(null);
 
   const fetchIssues = async () => {
     const res = await axios.get("http://localhost:5000/api/issues");
@@ -26,24 +26,22 @@ const AppShell = () => {
     fetchIssues();
   }, []);
 
-  // 🔒 ROBUST FILTER (populated + non-populated safety)
+  // Resident’s own issues (robust)
   const myIssues = issues.filter((i) => {
     if (!i.createdBy) return false;
     if (typeof i.createdBy === "string") return i.createdBy === user._id;
     return i.createdBy._id === user._id;
   });
 
+  // 🗺️ MAP CLICK HANDLER (PIN MODE ONLY)
+  const handleMapClick = (coords) => {
+    if (!pinMode) return;
+    setDraftPin(coords);
+  };
+
   return (
-    <div
-      style={{
-        height: "100vh",
-        width: "100vw",
-        display: "flex",
-        flexDirection: "column",
-        overflow: "hidden", // 🔒 critical
-      }}
-    >
-      {/* HEADER */}
+    <div style={{ height: "100vh", width: "100vw", display: "flex", flexDirection: "column" }}>
+      {/* 🔹 HEADER */}
       <div
         style={{
           height: HEADER_HEIGHT,
@@ -68,16 +66,16 @@ const AppShell = () => {
         </div>
       </div>
 
-      {/* BODY */}
+      {/* 🔹 BODY */}
       <div
         style={{
-          flex: 1,
+          height: `calc(100vh - ${HEADER_HEIGHT}px)`,
           display: "flex",
           width: "100%",
-          minHeight: 0, // 🔒 critical for flex children
+          minHeight: 0,
         }}
       >
-        {/* RESIDENT PANEL */}
+        {/* 👤 RESIDENT PANEL */}
         {user.role === "resident" && (
           <div
             style={{
@@ -85,7 +83,7 @@ const AppShell = () => {
               height: "100%",
               borderRight: "1px solid #eee",
               flexShrink: 0,
-              overflowY: "auto", // 🔒 independent scroll
+              overflowY: "auto",
             }}
           >
             <ResidentPanel
@@ -95,38 +93,65 @@ const AppShell = () => {
           </div>
         )}
 
-        {/* MAP AREA */}
+        {/* 🗺 MAP AREA */}
         <div
           style={{
             flex: 1,
             position: "relative",
             height: "100%",
             minHeight: 0,
-            overflow: "hidden", // 🔒 prevent scroll bleed
           }}
         >
           <MapView
             issues={issues}
             focusedIssue={focusedIssue}
-            onMapClick={(coords) => setReportLocation(coords)}
+            pinMode={pinMode}
+            draftPin={draftPin}
+            onMapClick={handleMapClick}
           />
 
-          {/* REPORT ISSUE */}
+          {/* 📍 PIN CONTROLS */}
           {user.role === "resident" && (
-            <>
-              <ReportIssueFAB
-                onClick={() => setShowReportModal(true)}
-              />
-
-              <ReportIssueModal
-                open={showReportModal}
-                location={reportLocation}
-                onClose={() => setShowReportModal(false)}
-                onCreated={() => {
-                  setTimeout(fetchIssues, 300);
-                }}
-              />
-            </>
+            <div
+              style={{
+                position: "absolute",
+                bottom: 24,
+                right: 24,
+                zIndex: 50,
+              }}
+            >
+              {!pinMode ? (
+                <button
+                  onClick={() => {
+                    setPinMode(true);
+                    setDraftPin(null);
+                  }}
+                  style={{
+                    padding: "12px 16px",
+                    background: "#2563eb",
+                    color: "white",
+                    borderRadius: 999,
+                  }}
+                >
+                  📍 Drop Pin
+                </button>
+              ) : (
+                <button
+                  onClick={() => {
+                    setPinMode(false);
+                    setDraftPin(null);
+                  }}
+                  style={{
+                    padding: "12px 16px",
+                    background: "#6b7280",
+                    color: "white",
+                    borderRadius: 999,
+                  }}
+                >
+                  ✕ Cancel Pin
+                </button>
+              )}
+            </div>
           )}
         </div>
       </div>

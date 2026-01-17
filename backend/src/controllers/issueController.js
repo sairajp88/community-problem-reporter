@@ -24,13 +24,13 @@ export const createIssue = async (req, res) => {
       return res.status(400).json({ message: "Missing required fields" });
     }
 
-    // 🔹 GeoJSON point
+    // GeoJSON point
     const point = {
       type: "Point",
       coordinates: [Number(longitude), Number(latitude)],
     };
 
-    // 🔹 Find matching zone
+    // Find matching zone
     const zones = await Zone.find();
     let matchedZone = null;
 
@@ -47,7 +47,7 @@ export const createIssue = async (req, res) => {
         .json({ message: "Location does not fall within any zone" });
     }
 
-    // 🔹 Upload images (optional)
+    // Upload images (optional)
     const imageUrls = [];
     if (req.files && req.files.length > 0) {
       for (const file of req.files) {
@@ -67,10 +67,9 @@ export const createIssue = async (req, res) => {
       createdBy: req.user._id,
     });
 
-    // 🔔 REAL-TIME: new issue
+    // 🔔 Real-time: new issue
     io.to(`zone:${issue.zone}`).emit("issue:new", issue);
 
-    // 🔔 REAL-TIME: emergency alert
     if (issue.severity === "emergency") {
       io.to("admin").emit("issue:emergency", issue);
     }
@@ -83,31 +82,24 @@ export const createIssue = async (req, res) => {
 
 /**
  * GET /api/issues
- * Admin → all issues
- * Others → assigned zones
- */
-/**
- * GET /api/issues
- * Admin → all issues
- * Zone managers → assigned zones
- * Residents → issues created by them
+ * Visibility rules (CURRENT PHASE):
+ * - admin → all issues
+ * - resident → all issues
+ * - zone_manager / subzone_manager → assigned zones only
  */
 export const getIssues = async (req, res) => {
   try {
     let filter = {};
 
-    if (req.user.role === "admin") {
-      filter = {};
-    } 
-    else if (
+    if (
       req.user.role === "zone_manager" ||
       req.user.role === "subzone_manager"
     ) {
       filter.zone = { $in: req.user.assignedZones || [] };
-    } 
-    else if (req.user.role === "resident") {
-      filter.createdBy = req.user._id;
     }
+
+    // NOTE:
+    // admin & resident intentionally get ALL issues
 
     const issues = await Issue.find(filter)
       .populate("zone", "name level")
@@ -118,7 +110,6 @@ export const getIssues = async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 };
-
 
 /**
  * GET /api/issues/:id
@@ -173,7 +164,6 @@ export const addComment = async (req, res) => {
 
     const newComment = issue.comments[issue.comments.length - 1];
 
-    // 🔔 REAL-TIME: new comment
     io.to(`zone:${issue.zone}`).emit("comment:new", {
       issueId: issue._id,
       comment: newComment,

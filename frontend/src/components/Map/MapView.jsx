@@ -3,9 +3,13 @@ import Map from "ol/Map";
 import View from "ol/View";
 import TileLayer from "ol/layer/Tile";
 import OSM from "ol/source/OSM";
-import { fromLonLat } from "ol/proj";
+import { fromLonLat, toLonLat } from "ol/proj";
 import axios from "axios";
-import { Style, Fill, Stroke } from "ol/style";
+import { Style, Fill, Stroke, Circle as CircleStyle } from "ol/style";
+import Feature from "ol/Feature";
+import Point from "ol/geom/Point";
+import { Vector as VectorLayer } from "ol/layer";
+import { Vector as VectorSource } from "ol/source";
 
 import { createZoneLayer } from "./ZoneLayer";
 import createIssueLayer from "./IssueLayer";
@@ -16,24 +20,27 @@ const hoverStyle = new Style({
   stroke: new Stroke({ color: "#ff0000", width: 2 }),
 });
 
-const MapView = ({ issues = [], focusedIssue }) => {
+const MapView = ({
+  issues = [],
+  focusedIssue,
+  pinMode,
+  draftPin,
+  onMapClick,
+}) => {
   const mapRef = useRef(null);
   const containerRef = useRef(null);
   const issueLayerRef = useRef(null);
+  const draftPinLayerRef = useRef(null);
 
   const [selectedIssue, setSelectedIssue] = useState(null);
 
-  // 🗺️ INIT MAP (ONCE)
+  // 🗺 INIT MAP (ONCE)
   useEffect(() => {
     if (!containerRef.current) return;
-
     let map;
 
     const init = async () => {
-      const zonesRes = await axios.get(
-        "http://localhost:5000/api/zones"
-      );
-
+      const zonesRes = await axios.get("http://localhost:5000/api/zones");
       const zoneLayer = createZoneLayer(zonesRes.data);
 
       map = new Map({
@@ -49,34 +56,30 @@ const MapView = ({ issues = [], focusedIssue }) => {
       });
 
       mapRef.current = map;
-
-      // force size calculation after mount
       setTimeout(() => map.updateSize(), 0);
 
-      // 🟢 CLICK → ONLY ISSUE SELECTION
+      // 🖱 CLICK HANDLER
       map.on("singleclick", (event) => {
+        const [lon, lat] = toLonLat(event.coordinate);
+
+        if (pinMode) {
+          onMapClick?.({ latitude: lat, longitude: lon });
+          return;
+        }
+
         map.forEachFeatureAtPixel(event.pixel, (feature) => {
           const issue = feature.get("issue");
-          if (issue) {
-            setSelectedIssue(issue);
-          }
+          if (issue) setSelectedIssue(issue);
         });
       });
 
-      // 🟡 ZONE HOVER ONLY
+      // 🟡 ZONE HOVER
       let hovered = null;
 
       map.on("pointermove", (event) => {
-        const feature = map.forEachFeatureAtPixel(
-          event.pixel,
-          (f) => f
-        );
+        const feature = map.forEachFeatureAtPixel(event.pixel, (f) => f);
 
-        if (
-          hovered &&
-          hovered !== feature &&
-          !hovered.get("issue")
-        ) {
+        if (hovered && hovered !== feature && !hovered.get("issue")) {
           hovered.setStyle(undefined);
           hovered = null;
         }
@@ -119,11 +122,45 @@ const MapView = ({ issues = [], focusedIssue }) => {
     const layer = createIssueLayer(projected);
     mapRef.current.addLayer(layer);
     issueLayerRef.current = layer;
-
-    mapRef.current.updateSize();
   }, [issues]);
 
-  // 🎯 FOCUS ISSUE (FROM PANEL)
+  // 📌 TEMP PIN LAYER
+  useEffect(() => {
+    if (!mapRef.current) return;
+
+    if (draftPinLayerRef.current) {
+      mapRef.current.removeLayer(draftPinLayerRef.current);
+      draftPinLayerRef.current = null;
+    }
+
+    if (!draftPin) return;
+
+    const feature = new Feature({
+      geometry: new Point(
+        fromLonLat([draftPin.longitude, draftPin.latitude])
+      ),
+    });
+
+    feature.setStyle(
+      new Style({
+        image: new CircleStyle({
+          radius: 10,
+          fill: new Fill({ color: "#2563eb" }),
+          stroke: new Stroke({ color: "white", width: 2 }),
+        }),
+      })
+    );
+
+    const layer = new VectorLayer({
+      source: new VectorSource({ features: [feature] }),
+      zIndex: 100,
+    });
+
+    mapRef.current.addLayer(layer);
+    draftPinLayerRef.current = layer;
+  }, [draftPin]);
+
+  // 🎯 FOCUS ISSUE
   useEffect(() => {
     if (!focusedIssue || !mapRef.current) return;
 
@@ -137,21 +174,10 @@ const MapView = ({ issues = [], focusedIssue }) => {
   }, [focusedIssue]);
 
   return (
-    <div
-      style={{
-        width: "100%",
-        height: "100%",
-        minHeight: "100%",
-        position: "relative",
-      }}
-    >
+    <div style={{ width: "100%", height: "100%", position: "relative" }}>
       <div
         ref={containerRef}
-        style={{
-          width: "100%",
-          height: "100%",
-          minHeight: "100%",
-        }}
+        style={{ width: "100%", height: "100%" }}
       />
 
       <IssuePopup
