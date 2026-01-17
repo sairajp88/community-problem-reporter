@@ -16,19 +16,22 @@ const hoverStyle = new Style({
   stroke: new Stroke({ color: "#ff0000", width: 2 }),
 });
 
-const MapView = ({ issues = [] }) => {
+const MapView = ({ issues = [], focusedIssue }) => {
   const mapRef = useRef(null);
   const containerRef = useRef(null);
   const issueLayerRef = useRef(null);
   const [selectedIssue, setSelectedIssue] = useState(null);
 
+  /* INIT MAP */
   useEffect(() => {
     if (!containerRef.current) return;
 
     let map;
 
     const init = async () => {
-      const zonesRes = await axios.get("http://localhost:5000/api/zones");
+      const zonesRes = await axios.get(
+        "http://localhost:5000/api/zones"
+      );
 
       const zoneLayer = createZoneLayer(zonesRes.data);
 
@@ -45,12 +48,9 @@ const MapView = ({ issues = [] }) => {
       });
 
       mapRef.current = map;
+      requestAnimationFrame(() => map.updateSize());
 
-      // 🔥 FORCE SIZE AFTER DOM PAINT
-      requestAnimationFrame(() => {
-        map.updateSize();
-      });
-
+      /* CLICK ISSUE */
       map.on("singleclick", (event) => {
         map.forEachFeatureAtPixel(event.pixel, (feature) => {
           const issue = feature.get("issue");
@@ -58,6 +58,7 @@ const MapView = ({ issues = [] }) => {
         });
       });
 
+      /* HOVER ZONES */
       let hovered = null;
       map.on("pointermove", (event) => {
         const f = map.forEachFeatureAtPixel(event.pixel, (x) => x);
@@ -84,6 +85,7 @@ const MapView = ({ issues = [] }) => {
     };
   }, []);
 
+  /* UPDATE ISSUES */
   useEffect(() => {
     if (!mapRef.current) return;
 
@@ -105,6 +107,23 @@ const MapView = ({ issues = [] }) => {
     mapRef.current.addLayer(layer);
     issueLayerRef.current = layer;
   }, [issues]);
+
+  /* FOCUS ISSUE FROM PANEL */
+  useEffect(() => {
+    if (!focusedIssue || !mapRef.current) return;
+
+    const center = fromLonLat(
+      focusedIssue.location.coordinates
+    );
+
+    mapRef.current.getView().animate({
+      center,
+      zoom: 17,
+      duration: 700,
+    });
+
+    setSelectedIssue(focusedIssue);
+  }, [focusedIssue]);
 
   return (
     <div style={{ width: "100%", height: "100%", position: "relative" }}>
