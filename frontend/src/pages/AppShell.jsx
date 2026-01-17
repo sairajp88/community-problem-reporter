@@ -26,19 +26,23 @@ const AppShell = () => {
     fetchIssues();
   }, []);
 
-  // 🔴 ROBUST FILTER (handles populated & non-populated createdBy)
+  // 🔒 ROBUST FILTER (populated + non-populated safety)
   const myIssues = issues.filter((i) => {
     if (!i.createdBy) return false;
-
-    if (typeof i.createdBy === "string") {
-      return i.createdBy === user._id;
-    }
-
+    if (typeof i.createdBy === "string") return i.createdBy === user._id;
     return i.createdBy._id === user._id;
   });
 
   return (
-    <div style={{ height: "100vh", width: "100vw" }}>
+    <div
+      style={{
+        height: "100vh",
+        width: "100vw",
+        display: "flex",
+        flexDirection: "column",
+        overflow: "hidden", // 🔒 critical
+      }}
+    >
       {/* HEADER */}
       <div
         style={{
@@ -67,10 +71,10 @@ const AppShell = () => {
       {/* BODY */}
       <div
         style={{
-          height: `calc(100vh - ${HEADER_HEIGHT}px)`,
+          flex: 1,
           display: "flex",
           width: "100%",
-          minHeight: 0,
+          minHeight: 0, // 🔒 critical for flex children
         }}
       >
         {/* RESIDENT PANEL */}
@@ -81,6 +85,7 @@ const AppShell = () => {
               height: "100%",
               borderRight: "1px solid #eee",
               flexShrink: 0,
+              overflowY: "auto", // 🔒 independent scroll
             }}
           >
             <ResidentPanel
@@ -90,13 +95,14 @@ const AppShell = () => {
           </div>
         )}
 
-        {/* MAP */}
+        {/* MAP AREA */}
         <div
           style={{
             flex: 1,
             position: "relative",
             height: "100%",
             minHeight: 0,
+            overflow: "hidden", // 🔒 prevent scroll bleed
           }}
         >
           <MapView
@@ -117,7 +123,6 @@ const AppShell = () => {
                 location={reportLocation}
                 onClose={() => setShowReportModal(false)}
                 onCreated={() => {
-                  // 🔴 delay ensures backend save + zone detection completed
                   setTimeout(fetchIssues, 300);
                 }}
               />

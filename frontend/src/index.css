@@ -2,7 +2,11 @@
 @tailwind components;
 @tailwind utilities;
 
-body {
+/* 🔒 GLOBAL HEIGHT CONTRACT — DO NOT REMOVE */
+html,
+body,
+#root {
+  height: 100%;
   margin: 0;
   padding: 0;
 }
