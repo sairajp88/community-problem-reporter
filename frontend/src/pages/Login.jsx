@@ -18,13 +18,19 @@ const Login = () => {
     setLoading(true);
 
     try {
-      const res = await axios.post("http://localhost:5000/api/auth/login", {
-        email,
-        password,
-      });
+      const res = await axios.post(
+        "http://localhost:5000/api/auth/login",
+        {
+          email,
+          password,
+        }
+      );
 
+      // ✅ Store auth globally
       login(res.data.user, res.data.token);
-      navigate("/dashboard");
+
+      // 🔴 PHASE 1 FIX: ALWAYS go to AppShell
+      navigate("/app");
     } catch (err) {
       setError(
         err.response?.data?.message || "Invalid email or password"
@@ -43,7 +49,9 @@ const Login = () => {
 
         <form onSubmit={submitHandler} className="space-y-4">
           {error && (
-            <p className="text-red-600 text-sm text-center">{error}</p>
+            <p className="text-red-600 text-sm text-center">
+              {error}
+            </p>
           )}
 
           <input
@@ -79,7 +87,10 @@ const Login = () => {
 
         <p className="text-sm text-center mt-4">
           Don’t have an account?{" "}
-          <Link to="/signup" className="text-blue-600 hover:underline">
+          <Link
+            to="/signup"
+            className="text-blue-600 hover:underline"
+          >
             Sign up
           </Link>
         </p>
