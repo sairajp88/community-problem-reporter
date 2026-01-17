@@ -3,7 +3,7 @@ import Map from "ol/Map";
 import View from "ol/View";
 import TileLayer from "ol/layer/Tile";
 import OSM from "ol/source/OSM";
-import { fromLonLat, toLonLat } from "ol/proj";
+import { fromLonLat } from "ol/proj";
 import axios from "axios";
 import { Style, Fill, Stroke } from "ol/style";
 
@@ -16,13 +16,14 @@ const hoverStyle = new Style({
   stroke: new Stroke({ color: "#ff0000", width: 2 }),
 });
 
-const MapView = ({ issues = [], focusedIssue, onMapClick }) => {
+const MapView = ({ issues = [], focusedIssue }) => {
   const mapRef = useRef(null);
   const containerRef = useRef(null);
   const issueLayerRef = useRef(null);
+
   const [selectedIssue, setSelectedIssue] = useState(null);
 
-  // INIT MAP
+  // 🗺️ INIT MAP (ONCE)
   useEffect(() => {
     if (!containerRef.current) return;
 
@@ -49,24 +50,20 @@ const MapView = ({ issues = [], focusedIssue, onMapClick }) => {
 
       mapRef.current = map;
 
+      // force size calculation after mount
       setTimeout(() => map.updateSize(), 0);
 
-      // MAP CLICK
+      // 🟢 CLICK → ONLY ISSUE SELECTION
       map.on("singleclick", (event) => {
-        const [lon, lat] = toLonLat(event.coordinate);
-
-        onMapClick?.({
-          latitude: lat,
-          longitude: lon,
-        });
-
         map.forEachFeatureAtPixel(event.pixel, (feature) => {
           const issue = feature.get("issue");
-          if (issue) setSelectedIssue(issue);
+          if (issue) {
+            setSelectedIssue(issue);
+          }
         });
       });
 
-      // ZONE HOVER
+      // 🟡 ZONE HOVER ONLY
       let hovered = null;
 
       map.on("pointermove", (event) => {
@@ -101,7 +98,7 @@ const MapView = ({ issues = [], focusedIssue, onMapClick }) => {
     };
   }, []);
 
-  // ISSUE MARKERS
+  // 📍 ISSUE MARKERS
   useEffect(() => {
     if (!mapRef.current) return;
 
@@ -123,11 +120,10 @@ const MapView = ({ issues = [], focusedIssue, onMapClick }) => {
     mapRef.current.addLayer(layer);
     issueLayerRef.current = layer;
 
-    // 🔴 FORCE REFRESH
     mapRef.current.updateSize();
   }, [issues]);
 
-  // FOCUS ISSUE
+  // 🎯 FOCUS ISSUE (FROM PANEL)
   useEffect(() => {
     if (!focusedIssue || !mapRef.current) return;
 
