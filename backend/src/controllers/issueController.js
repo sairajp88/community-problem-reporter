@@ -86,12 +86,27 @@ export const createIssue = async (req, res) => {
  * Admin → all issues
  * Others → assigned zones
  */
+/**
+ * GET /api/issues
+ * Admin → all issues
+ * Zone managers → assigned zones
+ * Residents → issues created by them
+ */
 export const getIssues = async (req, res) => {
   try {
     let filter = {};
 
-    if (req.user.role !== "admin") {
+    if (req.user.role === "admin") {
+      filter = {};
+    } 
+    else if (
+      req.user.role === "zone_manager" ||
+      req.user.role === "subzone_manager"
+    ) {
       filter.zone = { $in: req.user.assignedZones || [] };
+    } 
+    else if (req.user.role === "resident") {
+      filter.createdBy = req.user._id;
     }
 
     const issues = await Issue.find(filter)
@@ -103,6 +118,7 @@ export const getIssues = async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 };
+
 
 /**
  * GET /api/issues/:id
