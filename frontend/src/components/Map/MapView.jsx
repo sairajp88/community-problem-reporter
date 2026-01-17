@@ -20,6 +20,14 @@ const hoverStyle = new Style({
   stroke: new Stroke({ color: "#ff0000", width: 2 }),
 });
 
+const draftPinStyle = new Style({
+  image: new CircleStyle({
+    radius: 10,
+    fill: new Fill({ color: "#2563eb" }),
+    stroke: new Stroke({ color: "white", width: 2 }),
+  }),
+});
+
 const MapView = ({
   issues = [],
   focusedIssue,
@@ -29,14 +37,17 @@ const MapView = ({
 }) => {
   const mapRef = useRef(null);
   const containerRef = useRef(null);
+
   const issueLayerRef = useRef(null);
+  const draftPinFeatureRef = useRef(null);
   const draftPinLayerRef = useRef(null);
 
   const [selectedIssue, setSelectedIssue] = useState(null);
 
-  // 🗺 INIT MAP (ONCE)
+  // 🗺 INIT MAP ONCE
   useEffect(() => {
     if (!containerRef.current) return;
+
     let map;
 
     const init = async () => {
@@ -56,6 +67,20 @@ const MapView = ({
       });
 
       mapRef.current = map;
+
+      // 🔵 CREATE DRAFT PIN LAYER ONCE
+      draftPinFeatureRef.current = new Feature();
+      draftPinFeatureRef.current.setStyle(draftPinStyle);
+
+      draftPinLayerRef.current = new VectorLayer({
+        source: new VectorSource({
+          features: [draftPinFeatureRef.current],
+        }),
+        zIndex: 100,
+      });
+
+      map.addLayer(draftPinLayerRef.current);
+
       setTimeout(() => map.updateSize(), 0);
 
       // 🖱 CLICK HANDLER
@@ -64,7 +89,7 @@ const MapView = ({
 
         if (pinMode) {
           onMapClick?.({ latitude: lat, longitude: lon });
-          return;
+          return; // 🔴 DO NOT FALL THROUGH
         }
 
         map.forEachFeatureAtPixel(event.pixel, (feature) => {
@@ -77,6 +102,8 @@ const MapView = ({
       let hovered = null;
 
       map.on("pointermove", (event) => {
+        if (pinMode) return;
+
         const feature = map.forEachFeatureAtPixel(event.pixel, (f) => f);
 
         if (hovered && hovered !== feature && !hovered.get("issue")) {
@@ -124,41 +151,19 @@ const MapView = ({
     issueLayerRef.current = layer;
   }, [issues]);
 
-  // 📌 TEMP PIN LAYER
+  // 📌 UPDATE DRAFT PIN GEOMETRY (THIS IS THE FIX)
   useEffect(() => {
-    if (!mapRef.current) return;
+    if (!draftPinFeatureRef.current) return;
 
-    if (draftPinLayerRef.current) {
-      mapRef.current.removeLayer(draftPinLayerRef.current);
-      draftPinLayerRef.current = null;
+    if (!pinMode || !draftPin) {
+      draftPinFeatureRef.current.setGeometry(null);
+      return;
     }
 
-    if (!draftPin) return;
-
-    const feature = new Feature({
-      geometry: new Point(
-        fromLonLat([draftPin.longitude, draftPin.latitude])
-      ),
-    });
-
-    feature.setStyle(
-      new Style({
-        image: new CircleStyle({
-          radius: 10,
-          fill: new Fill({ color: "#2563eb" }),
-          stroke: new Stroke({ color: "white", width: 2 }),
-        }),
-      })
+    draftPinFeatureRef.current.setGeometry(
+      new Point(fromLonLat([draftPin.longitude, draftPin.latitude]))
     );
-
-    const layer = new VectorLayer({
-      source: new VectorSource({ features: [feature] }),
-      zIndex: 100,
-    });
-
-    mapRef.current.addLayer(layer);
-    draftPinLayerRef.current = layer;
-  }, [draftPin]);
+  }, [draftPin, pinMode]);
 
   // 🎯 FOCUS ISSUE
   useEffect(() => {
@@ -173,12 +178,16 @@ const MapView = ({
     setSelectedIssue(focusedIssue);
   }, [focusedIssue]);
 
+  // 🎯 CURSOR FEEDBACK
+  useEffect(() => {
+    if (!mapRef.current) return;
+    mapRef.current.getTargetElement().style.cursor =
+      pinMode ? "crosshair" : "";
+  }, [pinMode]);
+
   return (
     <div style={{ width: "100%", height: "100%", position: "relative" }}>
-      <div
-        ref={containerRef}
-        style={{ width: "100%", height: "100%" }}
-      />
+      <div ref={containerRef} style={{ width: "100%", height: "100%" }} />
 
       <IssuePopup
         issue={selectedIssue}
