@@ -2,63 +2,86 @@ import { useEffect, useRef, useState } from "react";
 import Map from "ol/Map";
 import View from "ol/View";
 import TileLayer from "ol/layer/Tile";
+import VectorLayer from "ol/layer/Vector";
+import VectorSource from "ol/source/Vector";
 import OSM from "ol/source/OSM";
+import Feature from "ol/Feature";
+import Point from "ol/geom/Point";
 import { fromLonLat, toLonLat } from "ol/proj";
 import axios from "axios";
 import { Style, Fill, Stroke, Circle as CircleStyle } from "ol/style";
-import Feature from "ol/Feature";
-import Point from "ol/geom/Point";
-import { Vector as VectorLayer } from "ol/layer";
-import { Vector as VectorSource } from "ol/source";
 
 import { createZoneLayer } from "./ZoneLayer";
-import createIssueLayer from "./IssueLayer";
 import IssuePopup from "../IssuePopup";
 
-const hoverStyle = new Style({
-  fill: new Fill({ color: "rgba(255,0,0,0.3)" }),
-  stroke: new Stroke({ color: "#ff0000", width: 2 }),
-});
+/* ---------- STYLES ---------- */
 
-const draftPinStyle = new Style({
+const issueStyle = (severity) =>
+  new Style({
+    image: new CircleStyle({
+      radius: severity === "emergency" ? 10 : 7,
+      fill: new Fill({
+        color: severity === "emergency" ? "#dc2626" : "#2563eb",
+      }),
+      stroke: new Stroke({ color: "white", width: 2 }),
+    }),
+  });
+
+const pinStyle = new Style({
   image: new CircleStyle({
-    radius: 10,
-    fill: new Fill({ color: "#2563eb" }),
-    stroke: new Stroke({ color: "white", width: 2 }),
+    radius: 11,
+    fill: new Fill({ color: "#16a34a" }),
+    stroke: new Stroke({ color: "white", width: 3 }),
   }),
 });
+
+/* ---------- COMPONENT ---------- */
 
 const MapView = ({
   issues = [],
   focusedIssue,
   pinMode,
-  draftPin,
+  draftLocation,
   onMapClick,
 }) => {
-  const mapRef = useRef(null);
   const containerRef = useRef(null);
-
+  const mapRef = useRef(null);
   const issueLayerRef = useRef(null);
-  const draftPinFeatureRef = useRef(null);
-  const draftPinLayerRef = useRef(null);
+  const pinLayerRef = useRef(null);
+  const pinModeRef = useRef(pinMode);
 
   const [selectedIssue, setSelectedIssue] = useState(null);
 
-  // 🗺 INIT MAP ONCE
   useEffect(() => {
-    if (!containerRef.current) return;
+    pinModeRef.current = pinMode;
+  }, [pinMode]);
 
-    let map;
+  /* ---------- INIT MAP ---------- */
+  useEffect(() => {
+    if (!containerRef.current || mapRef.current) return;
 
     const init = async () => {
       const zonesRes = await axios.get("http://localhost:5000/api/zones");
       const zoneLayer = createZoneLayer(zonesRes.data);
 
-      map = new Map({
+      const issueLayer = new VectorLayer({
+        source: new VectorSource(),
+        zIndex: 10,
+      });
+
+      const pinLayer = new VectorLayer({
+        source: new VectorSource(),
+        style: pinStyle,
+        zIndex: 20,
+      });
+
+      const map = new Map({
         target: containerRef.current,
         layers: [
           new TileLayer({ source: new OSM() }),
           zoneLayer,
+          issueLayer,
+          pinLayer,
         ],
         view: new View({
           center: fromLonLat([72.8777, 19.076]),
@@ -66,30 +89,12 @@ const MapView = ({
         }),
       });
 
-      mapRef.current = map;
-
-      // 🔵 CREATE DRAFT PIN LAYER ONCE
-      draftPinFeatureRef.current = new Feature();
-      draftPinFeatureRef.current.setStyle(draftPinStyle);
-
-      draftPinLayerRef.current = new VectorLayer({
-        source: new VectorSource({
-          features: [draftPinFeatureRef.current],
-        }),
-        zIndex: 100,
-      });
-
-      map.addLayer(draftPinLayerRef.current);
-
-      setTimeout(() => map.updateSize(), 0);
-
-      // 🖱 CLICK HANDLER
       map.on("singleclick", (event) => {
         const [lon, lat] = toLonLat(event.coordinate);
 
-        if (pinMode) {
+        if (pinModeRef.current) {
           onMapClick?.({ latitude: lat, longitude: lon });
-          return; // 🔴 DO NOT FALL THROUGH
+          return;
         }
 
         map.forEachFeatureAtPixel(event.pixel, (feature) => {
@@ -98,92 +103,66 @@ const MapView = ({
         });
       });
 
-      // 🟡 ZONE HOVER
-      let hovered = null;
+      mapRef.current = map;
+      issueLayerRef.current = issueLayer;
+      pinLayerRef.current = pinLayer;
 
-      map.on("pointermove", (event) => {
-        if (pinMode) return;
-
-        const feature = map.forEachFeatureAtPixel(event.pixel, (f) => f);
-
-        if (hovered && hovered !== feature && !hovered.get("issue")) {
-          hovered.setStyle(undefined);
-          hovered = null;
-        }
-
-        if (feature && !feature.get("issue")) {
-          hovered = feature;
-          feature.setStyle(hoverStyle);
-          map.getTargetElement().style.cursor = "pointer";
-        } else {
-          map.getTargetElement().style.cursor = "";
-        }
-      });
+      setTimeout(() => map.updateSize(), 0);
     };
 
     init();
-
-    return () => {
-      if (map) map.setTarget(null);
-    };
   }, []);
 
-  // 📍 ISSUE MARKERS
+  /* ---------- ISSUE MARKERS ---------- */
   useEffect(() => {
-    if (!mapRef.current) return;
+    if (!issueLayerRef.current) return;
 
-    if (issueLayerRef.current) {
-      mapRef.current.removeLayer(issueLayerRef.current);
-    }
+    const source = issueLayerRef.current.getSource();
+    source.clear();
 
-    if (!issues.length) return;
-
-    const projected = issues.map((i) => ({
-      ...i,
-      location: {
-        ...i.location,
-        coordinates: fromLonLat(i.location.coordinates),
-      },
-    }));
-
-    const layer = createIssueLayer(projected);
-    mapRef.current.addLayer(layer);
-    issueLayerRef.current = layer;
+    issues.forEach((issue) => {
+      const feature = new Feature({
+        geometry: new Point(fromLonLat(issue.location.coordinates)),
+      });
+      feature.set("issue", issue);
+      feature.setStyle(issueStyle(issue.severity));
+      source.addFeature(feature);
+    });
   }, [issues]);
 
-  // 📌 UPDATE DRAFT PIN GEOMETRY (THIS IS THE FIX)
+  /* ---------- DRAFT PIN ---------- */
   useEffect(() => {
-    if (!draftPinFeatureRef.current) return;
+    if (!pinLayerRef.current) return;
 
-    if (!pinMode || !draftPin) {
-      draftPinFeatureRef.current.setGeometry(null);
-      return;
+    const source = pinLayerRef.current.getSource();
+    source.clear();
+
+    if (draftLocation) {
+      source.addFeature(
+        new Feature({
+          geometry: new Point(
+            fromLonLat([
+              draftLocation.longitude,
+              draftLocation.latitude,
+            ])
+          ),
+        })
+      );
     }
+  }, [draftLocation]);
 
-    draftPinFeatureRef.current.setGeometry(
-      new Point(fromLonLat([draftPin.longitude, draftPin.latitude]))
-    );
-  }, [draftPin, pinMode]);
-
-  // 🎯 FOCUS ISSUE
+  /* ---------- FOCUS ISSUE ---------- */
   useEffect(() => {
     if (!focusedIssue || !mapRef.current) return;
 
     mapRef.current.getView().animate({
       center: fromLonLat(focusedIssue.location.coordinates),
       zoom: 17,
-      duration: 700,
+      duration: 600,
     });
 
     setSelectedIssue(focusedIssue);
   }, [focusedIssue]);
-
-  // 🎯 CURSOR FEEDBACK
-  useEffect(() => {
-    if (!mapRef.current) return;
-    mapRef.current.getTargetElement().style.cursor =
-      pinMode ? "crosshair" : "";
-  }, [pinMode]);
 
   return (
     <div style={{ width: "100%", height: "100%", position: "relative" }}>

@@ -14,7 +14,7 @@ const AppShell = () => {
   const [focusedIssue, setFocusedIssue] = useState(null);
 
   const [pinMode, setPinMode] = useState(false);
-  const [draftPin, setDraftPin] = useState(null);
+  const [draftLocation, setDraftLocation] = useState(null);
 
   const fetchIssues = async () => {
     const res = await axios.get("http://localhost:5000/api/issues");
@@ -31,13 +31,8 @@ const AppShell = () => {
     return i.createdBy._id === user._id;
   });
 
-  const handleMapClick = (coords) => {
-    if (!pinMode) return;
-    setDraftPin(coords);
-  };
-
   return (
-    <div style={{ height: "100vh", width: "100vw", display: "flex", flexDirection: "column" }}>
+    <div style={{ height: "100vh", display: "flex", flexDirection: "column" }}>
       {/* HEADER */}
       <div
         style={{
@@ -51,7 +46,6 @@ const AppShell = () => {
         }}
       >
         <strong>Community Problem Reporter</strong>
-
         <div style={{ display: "flex", gap: 16 }}>
           <span>{user.role.replace("_", " ")}</span>
           <button onClick={logout} style={{ color: "red" }}>
@@ -61,21 +55,9 @@ const AppShell = () => {
       </div>
 
       {/* BODY */}
-      <div
-        style={{
-          height: `calc(100vh - ${HEADER_HEIGHT}px)`,
-          display: "flex",
-          minHeight: 0,
-        }}
-      >
+      <div style={{ flex: 1, display: "flex" }}>
         {user.role === "resident" && (
-          <div
-            style={{
-              width: 320,
-              borderRight: "1px solid #eee",
-              overflowY: "auto",
-            }}
-          >
+          <div style={{ width: 320, borderRight: "1px solid #eee" }}>
             <ResidentPanel
               issues={myIssues}
               onSelectIssue={setFocusedIssue}
@@ -88,72 +70,33 @@ const AppShell = () => {
             issues={issues}
             focusedIssue={focusedIssue}
             pinMode={pinMode}
-            draftPin={draftPin}
-            onMapClick={handleMapClick}
+            draftLocation={draftLocation}
+            onMapClick={(coords) => {
+              console.log("🟢 onMapClick received:", coords);
+              setDraftLocation(coords);
+            }}
           />
 
-          {/* PIN CONTROLS */}
-          {user.role === "resident" && (
-            <>
-              <div
-                style={{
-                  position: "absolute",
-                  bottom: 24,
-                  right: 24,
-                  zIndex: 50,
-                }}
-              >
-                {!pinMode ? (
-                  <button
-                    onClick={() => {
-                      setPinMode(true);
-                      setDraftPin(null);
-                    }}
-                    style={{
-                      padding: "12px 16px",
-                      background: "#2563eb",
-                      color: "white",
-                      borderRadius: 999,
-                    }}
-                  >
-                    📍 Drop Pin
-                  </button>
-                ) : (
-                  <button
-                    onClick={() => {
-                      setPinMode(false);
-                      setDraftPin(null);
-                    }}
-                    style={{
-                      padding: "12px 16px",
-                      background: "#6b7280",
-                      color: "white",
-                      borderRadius: 999,
-                    }}
-                  >
-                    ✕ Cancel Pin
-                  </button>
-                )}
-              </div>
-
-              {pinMode && (
-                <div
-                  style={{
-                    position: "absolute",
-                    bottom: 80,
-                    right: 24,
-                    background: "white",
-                    padding: "8px 12px",
-                    borderRadius: 6,
-                    boxShadow: "0 2px 6px rgba(0,0,0,0.2)",
-                    fontSize: 13,
-                  }}
-                >
-                  Click on the map to place the issue pin
-                </div>
-              )}
-            </>
-          )}
+          <button
+            onClick={() => {
+              console.log("🟢 TOGGLE PIN MODE");
+              setPinMode((v) => !v);
+              setDraftLocation(null);
+            }}
+            style={{
+              position: "absolute",
+              bottom: 24,
+              right: 24,
+              zIndex: 100,
+              padding: "14px 18px",
+              borderRadius: 999,
+              background: pinMode ? "#6b7280" : "#2563eb",
+              color: "white",
+              fontWeight: 500,
+            }}
+          >
+            {pinMode ? "✕ Cancel Pin" : "📍 Drop Pin"}
+          </button>
         </div>
       </div>
     </div>
