@@ -1,8 +1,11 @@
-const AdminSidebar = ({ issues = [] }) => {
-  const total = issues.length;
-  const emergency = issues.filter(
+const AdminSidebar = ({ issues = [], onSelectIssue }) => {
+  const emergencyIssues = issues.filter(
     (i) => i.severity === "emergency"
-  ).length;
+  );
+
+  const openIssues = issues.filter(
+    (i) => i.status !== "resolved"
+  );
 
   return (
     <div
@@ -19,19 +22,47 @@ const AdminSidebar = ({ issues = [] }) => {
         Admin Overview
       </h3>
 
-      <div style={{ marginBottom: 12 }}>
-        <strong>Total Issues:</strong> {total}
-      </div>
-
-      <div style={{ marginBottom: 12, color: "#dc2626" }}>
-        <strong>Emergency Issues:</strong> {emergency}
+      {/* STATS */}
+      <div style={{ marginBottom: 16 }}>
+        <div>
+          <strong>Total Issues:</strong> {issues.length}
+        </div>
+        <div>
+          <strong>Open Issues:</strong> {openIssues.length}
+        </div>
+        <div style={{ color: "#dc2626" }}>
+          <strong>Emergency:</strong> {emergencyIssues.length}
+        </div>
       </div>
 
       <hr style={{ margin: "16px 0" }} />
 
-      <p style={{ fontSize: 14, color: "#555" }}>
-        Detailed controls will be added in later phases.
-      </p>
+      {/* EMERGENCY LIST */}
+      <h4 style={{ marginBottom: 8, color: "#dc2626" }}>
+        Emergency Issues
+      </h4>
+
+      {emergencyIssues.length === 0 && (
+        <p style={{ fontSize: 13, color: "#666" }}>
+          No emergency issues 🎉
+        </p>
+      )}
+
+      <ul style={{ fontSize: 14 }}>
+        {emergencyIssues.map((issue) => (
+          <li
+            key={issue._id}
+            style={{
+              marginBottom: 8,
+              cursor: "pointer",
+              textDecoration: "underline",
+            }}
+            onClick={() => onSelectIssue?.(issue)}
+          >
+            {issue.title}
+          </li>
+        ))}
+      </ul>
     </div>
   );
 };

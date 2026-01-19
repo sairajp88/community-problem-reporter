@@ -36,26 +36,37 @@ const AppShell = () => {
 
   /* ---------- SIDEBAR SELECTOR ---------- */
 
-  const renderSidebar = () => {
-    if (user.role === "resident") {
-      return (
-        <ResidentPanel
-          issues={myIssues}
-          onSelectIssue={setFocusedIssue}
-        />
-      );
-    }
+const renderSidebar = () => {
+  if (user.role === "resident") {
+    return (
+      <ResidentPanel
+        issues={myIssues}
+        onSelectIssue={setFocusedIssue}
+      />
+    );
+  }
 
-    if (user.role === "admin") {
-      return <AdminSidebar issues={issues} />;
-    }
+  if (user.role === "admin") {
+    return (
+      <AdminSidebar
+        issues={issues}
+        onSelectIssue={setFocusedIssue}
+      />
+    );
+  }
 
-    if (user.role === "zone_manager") {
-      return <ZoneManagerSidebar issues={issues} />;
-    }
+  if (user.role === "zone_manager") {
+    return (
+      <ZoneManagerSidebar
+        issues={issues}
+        onSelectIssue={setFocusedIssue}
+      />
+    );
+  }
 
-    return null;
-  };
+  return null;
+};
+
 
   return (
     <div style={{ height: "100vh", display: "flex", flexDirection: "column" }}>

@@ -151,18 +151,38 @@ const MapView = ({
     }
   }, [draftLocation]);
 
-  /* ---------- FOCUS ISSUE ---------- */
-  useEffect(() => {
-    if (!focusedIssue || !mapRef.current) return;
+/* ---------- FOCUS ISSUE ---------- */
+useEffect(() => {
+  if (
+    !focusedIssue ||
+    !focusedIssue.location ||
+    !Array.isArray(focusedIssue.location.coordinates)
+  ) {
+    return;
+  }
 
-    mapRef.current.getView().animate({
-      center: fromLonLat(focusedIssue.location.coordinates),
-      zoom: 17,
-      duration: 600,
-    });
+  const [lon, lat] = focusedIssue.location.coordinates;
 
-    setSelectedIssue(focusedIssue);
-  }, [focusedIssue]);
+  if (
+    typeof lon !== "number" ||
+    typeof lat !== "number" ||
+    !mapRef.current
+  ) {
+    return;
+  }
+
+  // 🔑 CRITICAL FIX
+  mapRef.current.updateSize();
+
+  mapRef.current.getView().animate({
+    center: fromLonLat([lon, lat]),
+    zoom: 17,
+    duration: 600,
+  });
+
+  setSelectedIssue(focusedIssue);
+}, [focusedIssue]);
+
 
   return (
     <div style={{ width: "100%", height: "100%", position: "relative" }}>

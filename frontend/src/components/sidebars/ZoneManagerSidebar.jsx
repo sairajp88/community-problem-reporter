@@ -1,4 +1,8 @@
-const ZoneManagerSidebar = ({ issues = [] }) => {
+const ZoneManagerSidebar = ({ issues = [], onSelectIssue }) => {
+  const openIssues = issues.filter(
+    (i) => i.status !== "resolved"
+  );
+
   return (
     <div
       style={{
@@ -15,20 +19,29 @@ const ZoneManagerSidebar = ({ issues = [] }) => {
       </h3>
 
       <div style={{ marginBottom: 12 }}>
-        <strong>Issues in your zones:</strong> {issues.length}
+        <strong>Active Issues:</strong> {openIssues.length}
       </div>
 
+      <hr style={{ margin: "12px 0" }} />
+
       <ul style={{ fontSize: 14 }}>
-        {issues.slice(0, 5).map((issue) => (
-          <li key={issue._id} style={{ marginBottom: 8 }}>
+        {openIssues.map((issue) => (
+          <li
+            key={issue._id}
+            style={{
+              marginBottom: 8,
+              cursor: "pointer",
+            }}
+            onClick={() => onSelectIssue?.(issue)}
+          >
             • {issue.title}
           </li>
         ))}
       </ul>
 
-      {issues.length > 5 && (
-        <p style={{ fontSize: 12, color: "#666" }}>
-          Showing first 5 issues
+      {openIssues.length === 0 && (
+        <p style={{ fontSize: 13, color: "#666" }}>
+          No active issues in your zones
         </p>
       )}
     </div>
