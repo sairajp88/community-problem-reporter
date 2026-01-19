@@ -4,8 +4,11 @@ import { useAuth } from "../context/AuthContext";
 
 import MapView from "../components/Map/MapView";
 import ResidentPanel from "../components/panels/ResidentPanel";
+import AdminSidebar from "../components/sidebars/AdminSidebar";
+import ZoneManagerSidebar from "../components/sidebars/ZoneManagerSidebar";
 
 const HEADER_HEIGHT = 56;
+const SIDEBAR_WIDTH = 320;
 
 const AppShell = () => {
   const { user, logout } = useAuth();
@@ -30,6 +33,29 @@ const AppShell = () => {
     if (typeof i.createdBy === "string") return i.createdBy === user._id;
     return i.createdBy._id === user._id;
   });
+
+  /* ---------- SIDEBAR SELECTOR ---------- */
+
+  const renderSidebar = () => {
+    if (user.role === "resident") {
+      return (
+        <ResidentPanel
+          issues={myIssues}
+          onSelectIssue={setFocusedIssue}
+        />
+      );
+    }
+
+    if (user.role === "admin") {
+      return <AdminSidebar issues={issues} />;
+    }
+
+    if (user.role === "zone_manager") {
+      return <ZoneManagerSidebar issues={issues} />;
+    }
+
+    return null;
+  };
 
   return (
     <div style={{ height: "100vh", display: "flex", flexDirection: "column" }}>
@@ -56,15 +82,19 @@ const AppShell = () => {
 
       {/* BODY */}
       <div style={{ flex: 1, display: "flex" }}>
-        {user.role === "resident" && (
-          <div style={{ width: 320, borderRight: "1px solid #eee" }}>
-            <ResidentPanel
-              issues={myIssues}
-              onSelectIssue={setFocusedIssue}
-            />
+        {/* LEFT SIDEBAR */}
+        {renderSidebar() && (
+          <div
+            style={{
+              width: SIDEBAR_WIDTH,
+              borderRight: "1px solid #eee",
+            }}
+          >
+            {renderSidebar()}
           </div>
         )}
 
+        {/* MAP */}
         <div style={{ flex: 1, position: "relative" }}>
           <MapView
             issues={issues}
@@ -77,6 +107,7 @@ const AppShell = () => {
             }}
           />
 
+          {/* PIN BUTTON */}
           <button
             onClick={() => {
               console.log("🟢 TOGGLE PIN MODE");
