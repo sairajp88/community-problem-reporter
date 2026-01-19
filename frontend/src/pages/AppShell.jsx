@@ -6,7 +6,8 @@ import MapView from "../components/Map/MapView";
 import ResidentPanel from "../components/panels/ResidentPanel";
 import AdminSidebar from "../components/sidebars/AdminSidebar";
 import ZoneManagerSidebar from "../components/sidebars/ZoneManagerSidebar";
-import ReportIssueModal from "../components/modals/ReportIssueModal"; // ✅ ensure this import exists
+import ReportIssueModal from "../components/modals/ReportIssueModal";
+import ReportIssueFAB from "../components/ui/ReportIssueFAB";
 
 const HEADER_HEIGHT = 56;
 const SIDEBAR_WIDTH = 320;
@@ -31,13 +32,18 @@ const AppShell = () => {
     fetchIssues();
   }, []);
 
+  console.log("📌 AppShell render:", {
+    pinMode,
+    draftLocation,
+    showReportModal,
+  });
+
   const myIssues = issues.filter((i) => {
     if (!i.createdBy) return false;
     if (typeof i.createdBy === "string") return i.createdBy === user._id;
     return i.createdBy._id === user._id;
   });
 
-  /* ---------- SIDEBAR SELECTOR ---------- */
   const renderSidebar = () => {
     if (user.role === "resident") {
       return (
@@ -94,7 +100,6 @@ const AppShell = () => {
 
       {/* BODY */}
       <div style={{ flex: 1, display: "flex" }}>
-        {/* LEFT SIDEBAR */}
         {renderSidebar() && (
           <div
             style={{
@@ -106,7 +111,6 @@ const AppShell = () => {
           </div>
         )}
 
-        {/* MAP */}
         <div style={{ flex: 1, position: "relative" }}>
           <MapView
             issues={issues}
@@ -114,16 +118,17 @@ const AppShell = () => {
             pinMode={pinMode}
             draftLocation={draftLocation}
             onMapClick={(coords) => {
-              console.log("🟢 onMapClick received:", coords);
-              setDraftLocation(coords);
-              setShowReportModal(true);
+              console.log(
+                "🟢 AppShell accepting draftLocation:",
+                coords
+              );
+              setDraftLocation(coords); // ✅ ALWAYS accept
             }}
           />
 
-          {/* PIN BUTTON */}
+          {/* DROP / CANCEL PIN */}
           <button
             onClick={() => {
-              console.log("🟢 TOGGLE PIN MODE");
               setPinMode((v) => !v);
               setDraftLocation(null);
               setShowReportModal(false);
@@ -143,7 +148,13 @@ const AppShell = () => {
             {pinMode ? "✕ Cancel Pin" : "📍 Drop Pin"}
           </button>
 
-          {/* ✅ REPORT MODAL */}
+          {/* CREATE ISSUE BUTTON */}
+          {pinMode && draftLocation && (
+            <ReportIssueFAB
+              onClick={() => setShowReportModal(true)}
+            />
+          )}
+
           <ReportIssueModal
             open={showReportModal}
             location={draftLocation}
@@ -152,8 +163,7 @@ const AppShell = () => {
               setPinMode(false);
               setDraftLocation(null);
             }}
-            onCreated={() => {}}
-            onIssueCreated={fetchIssues} // ✅ PHASE 5 FIX
+            onIssueCreated={fetchIssues}
           />
         </div>
       </div>

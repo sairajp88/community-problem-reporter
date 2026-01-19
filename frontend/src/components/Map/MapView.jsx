@@ -48,19 +48,26 @@ const MapView = ({
   const mapRef = useRef(null);
   const issueLayerRef = useRef(null);
   const pinLayerRef = useRef(null);
+
+  // 🔑 THE IMPORTANT FIX
   const pinModeRef = useRef(pinMode);
 
   const [selectedIssue, setSelectedIssue] = useState(null);
+  const [currentZoom, setCurrentZoom] = useState(12);
 
+  // 🔁 Keep ref in sync with React state
   useEffect(() => {
     pinModeRef.current = pinMode;
+    console.log("🔁 pinModeRef updated:", pinModeRef.current);
   }, [pinMode]);
 
-  /* ---------- INIT MAP ---------- */
+  /* ---------- INIT MAP (ONCE ONLY) ---------- */
   useEffect(() => {
     if (!containerRef.current || mapRef.current) return;
 
     const init = async () => {
+      console.log("🗺️ Initializing map");
+
       const zonesRes = await axios.get("http://localhost:5000/api/zones");
       const zoneLayer = createZoneLayer(zonesRes.data);
 
@@ -89,10 +96,18 @@ const MapView = ({
         }),
       });
 
+      map.getView().on("change:resolution", () => {
+        setCurrentZoom(map.getView().getZoom());
+      });
+
       map.on("singleclick", (event) => {
         const [lon, lat] = toLonLat(event.coordinate);
 
+        console.log("🗺️ Map clicked");
+        console.log("📌 pinModeRef:", pinModeRef.current);
+
         if (pinModeRef.current) {
+          console.log("🟢 Pin mode active → placing pin");
           onMapClick?.({ latitude: lat, longitude: lon });
           return;
         }
@@ -121,73 +136,77 @@ const MapView = ({
     source.clear();
 
     issues.forEach((issue) => {
+      const isEmergency = issue.severity === "emergency";
+      if (!isEmergency && currentZoom < 14) return;
+
+      if (
+        !issue.location ||
+        !Array.isArray(issue.location.coordinates)
+      ) {
+        return;
+      }
+
       const feature = new Feature({
-        geometry: new Point(fromLonLat(issue.location.coordinates)),
+        geometry: new Point(
+          fromLonLat(issue.location.coordinates)
+        ),
       });
+
       feature.set("issue", issue);
       feature.setStyle(issueStyle(issue.severity));
       source.addFeature(feature);
     });
-  }, [issues]);
+  }, [issues, currentZoom]);
 
   /* ---------- DRAFT PIN ---------- */
   useEffect(() => {
+    console.log("📍 draftLocation:", draftLocation);
+
     if (!pinLayerRef.current) return;
 
     const source = pinLayerRef.current.getSource();
     source.clear();
 
-    if (draftLocation) {
-      source.addFeature(
-        new Feature({
-          geometry: new Point(
-            fromLonLat([
-              draftLocation.longitude,
-              draftLocation.latitude,
-            ])
-          ),
-        })
-      );
-    }
+    if (!draftLocation) return;
+
+    source.addFeature(
+      new Feature({
+        geometry: new Point(
+          fromLonLat([
+            draftLocation.longitude,
+            draftLocation.latitude,
+          ])
+        ),
+      })
+    );
   }, [draftLocation]);
 
-/* ---------- FOCUS ISSUE ---------- */
-useEffect(() => {
-  if (
-    !focusedIssue ||
-    !focusedIssue.location ||
-    !Array.isArray(focusedIssue.location.coordinates)
-  ) {
-    return;
-  }
+  /* ---------- FOCUS ISSUE ---------- */
+  useEffect(() => {
+    if (
+      !focusedIssue ||
+      !focusedIssue.location ||
+      !Array.isArray(focusedIssue.location.coordinates)
+    ) {
+      return;
+    }
 
-  const [lon, lat] = focusedIssue.location.coordinates;
+    const [lon, lat] = focusedIssue.location.coordinates;
+    if (!mapRef.current) return;
 
-  if (
-    typeof lon !== "number" ||
-    typeof lat !== "number" ||
-    !mapRef.current
-  ) {
-    return;
-  }
+    mapRef.current.updateSize();
+    mapRef.current.getView().animate({
+      center: fromLonLat([lon, lat]),
+      zoom: 17,
+      duration: 600,
+    });
 
-  // 🔑 CRITICAL FIX
-  mapRef.current.updateSize();
-
-  mapRef.current.getView().animate({
-    center: fromLonLat([lon, lat]),
-    zoom: 17,
-    duration: 600,
-  });
-
-  setSelectedIssue(focusedIssue);
-}, [focusedIssue]);
-
+    setSelectedIssue(focusedIssue);
+  }, [focusedIssue]);
 
   return (
     <div style={{ width: "100%", height: "100%", position: "relative" }}>
       <div ref={containerRef} style={{ width: "100%", height: "100%" }} />
-
       <IssuePopup
         issue={selectedIssue}
         onClose={() => setSelectedIssue(null)}
