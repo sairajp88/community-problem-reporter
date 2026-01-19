@@ -6,6 +6,7 @@ import MapView from "../components/Map/MapView";
 import ResidentPanel from "../components/panels/ResidentPanel";
 import AdminSidebar from "../components/sidebars/AdminSidebar";
 import ZoneManagerSidebar from "../components/sidebars/ZoneManagerSidebar";
+import ReportIssueModal from "../components/modals/ReportIssueModal"; // ✅ ensure this import exists
 
 const HEADER_HEIGHT = 56;
 const SIDEBAR_WIDTH = 320;
@@ -18,6 +19,8 @@ const AppShell = () => {
 
   const [pinMode, setPinMode] = useState(false);
   const [draftLocation, setDraftLocation] = useState(null);
+
+  const [showReportModal, setShowReportModal] = useState(false);
 
   const fetchIssues = async () => {
     const res = await axios.get("http://localhost:5000/api/issues");
@@ -35,38 +38,36 @@ const AppShell = () => {
   });
 
   /* ---------- SIDEBAR SELECTOR ---------- */
+  const renderSidebar = () => {
+    if (user.role === "resident") {
+      return (
+        <ResidentPanel
+          issues={myIssues}
+          onSelectIssue={setFocusedIssue}
+        />
+      );
+    }
 
-const renderSidebar = () => {
-  if (user.role === "resident") {
-    return (
-      <ResidentPanel
-        issues={myIssues}
-        onSelectIssue={setFocusedIssue}
-      />
-    );
-  }
+    if (user.role === "admin") {
+      return (
+        <AdminSidebar
+          issues={issues}
+          onSelectIssue={setFocusedIssue}
+        />
+      );
+    }
 
-  if (user.role === "admin") {
-    return (
-      <AdminSidebar
-        issues={issues}
-        onSelectIssue={setFocusedIssue}
-      />
-    );
-  }
+    if (user.role === "zone_manager") {
+      return (
+        <ZoneManagerSidebar
+          issues={issues}
+          onSelectIssue={setFocusedIssue}
+        />
+      );
+    }
 
-  if (user.role === "zone_manager") {
-    return (
-      <ZoneManagerSidebar
-        issues={issues}
-        onSelectIssue={setFocusedIssue}
-      />
-    );
-  }
-
-  return null;
-};
-
+    return null;
+  };
 
   return (
     <div style={{ height: "100vh", display: "flex", flexDirection: "column" }}>
@@ -115,6 +116,7 @@ const renderSidebar = () => {
             onMapClick={(coords) => {
               console.log("🟢 onMapClick received:", coords);
               setDraftLocation(coords);
+              setShowReportModal(true);
             }}
           />
 
@@ -124,6 +126,7 @@ const renderSidebar = () => {
               console.log("🟢 TOGGLE PIN MODE");
               setPinMode((v) => !v);
               setDraftLocation(null);
+              setShowReportModal(false);
             }}
             style={{
               position: "absolute",
@@ -139,6 +142,19 @@ const renderSidebar = () => {
           >
             {pinMode ? "✕ Cancel Pin" : "📍 Drop Pin"}
           </button>
+
+          {/* ✅ REPORT MODAL */}
+          <ReportIssueModal
+            open={showReportModal}
+            location={draftLocation}
+            onClose={() => {
+              setShowReportModal(false);
+              setPinMode(false);
+              setDraftLocation(null);
+            }}
+            onCreated={() => {}}
+            onIssueCreated={fetchIssues} // ✅ PHASE 5 FIX
+          />
         </div>
       </div>
     </div>

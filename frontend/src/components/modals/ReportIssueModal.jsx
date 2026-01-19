@@ -1,7 +1,13 @@
 import { useState } from "react";
 import axios from "axios";
 
-const ReportIssueModal = ({ open, onClose, onCreated, location }) => {
+const ReportIssueModal = ({
+  open,
+  onClose,
+  onCreated,
+  onIssueCreated, // ✅ NEW CALLBACK
+  location,
+}) => {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [category, setCategory] = useState("general");
@@ -10,7 +16,7 @@ const ReportIssueModal = ({ open, onClose, onCreated, location }) => {
 
   if (!open) return null;
 
-  const submit = async () => {
+  const handleSubmit = async () => {
     if (!title || !description) return;
 
     if (!location) {
@@ -31,8 +37,11 @@ const ReportIssueModal = ({ open, onClose, onCreated, location }) => {
 
       await axios.post("http://localhost:5000/api/issues", form);
 
+      // ✅ PHASE 5 FIX — trigger re-fetch in AppShell
+      onIssueCreated?.();
+
       onClose();
-      onCreated();
+      onCreated?.();
     } catch {
       alert("Failed to create issue");
     } finally {
@@ -99,7 +108,7 @@ const ReportIssueModal = ({ open, onClose, onCreated, location }) => {
 
         <div style={{ display: "flex", justifyContent: "flex-end", gap: 8 }}>
           <button onClick={onClose}>Cancel</button>
-          <button onClick={submit} disabled={loading}>
+          <button onClick={handleSubmit} disabled={loading}>
             {loading ? "Posting..." : "Submit"}
           </button>
         </div>
