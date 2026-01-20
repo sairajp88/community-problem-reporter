@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { useLocation } from "react-router-dom";
 import axios from "axios";
 import { useAuth } from "../context/AuthContext";
 
@@ -9,11 +10,19 @@ import ZoneManagerSidebar from "../components/sidebars/ZoneManagerSidebar";
 import ReportIssueModal from "../components/modals/ReportIssueModal";
 import ReportIssueFAB from "../components/ui/ReportIssueFAB";
 
+import Dashboard from "./Dashboard"; // ✅ IMPORTANT
+
 const HEADER_HEIGHT = 56;
 const SIDEBAR_WIDTH = 320;
 
 const AppShell = () => {
   const { user, logout } = useAuth();
+  const location = useLocation();
+
+  /* 🔑 MANAGEMENT ROUTES (ADMIN DASHBOARD) */
+  if (location.pathname.startsWith("/app/admin")) {
+    return <Dashboard />;
+  }
 
   const [issues, setIssues] = useState([]);
   const [focusedIssue, setFocusedIssue] = useState(null);
@@ -42,7 +51,7 @@ const AppShell = () => {
     fetchIssues();
   }, []);
 
-  /* ---------- RESIDENT ISSUE FILTER (FIXED) ---------- */
+  /* ---------- RESIDENT ISSUE FILTER ---------- */
   const myIssues = useMemo(() => {
     if (!currentUserId) return [];
 

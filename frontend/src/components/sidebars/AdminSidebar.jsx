@@ -1,4 +1,8 @@
+import { useNavigate } from "react-router-dom";
+
 const AdminSidebar = ({ issues = [], onSelectIssue }) => {
+  const navigate = useNavigate();
+
   const emergencyIssues = issues.filter(
     (i) => i.severity === "emergency"
   );
@@ -18,9 +22,28 @@ const AdminSidebar = ({ issues = [], onSelectIssue }) => {
         overflowY: "auto",
       }}
     >
-      <h3 style={{ fontWeight: 600, marginBottom: 16 }}>
+      {/* HEADER */}
+      <h3 style={{ fontWeight: 600, marginBottom: 12 }}>
         Admin Overview
       </h3>
+
+      {/* 🔵 NAVIGATION TO ADMIN DASHBOARD */}
+      <button
+        onClick={() => navigate("/app/admin")}
+        style={{
+          width: "100%",
+          padding: "10px 12px",
+          marginBottom: 16,
+          background: "#2563eb",
+          color: "white",
+          borderRadius: 6,
+          fontWeight: 500,
+          border: "none",
+          cursor: "pointer",
+        }}
+      >
+        Manage Zones & Issues
+      </button>
 
       {/* STATS */}
       <div style={{ marginBottom: 16 }}>
@@ -48,7 +71,7 @@ const AdminSidebar = ({ issues = [], onSelectIssue }) => {
         </p>
       )}
 
-      <ul style={{ fontSize: 14 }}>
+      <ul style={{ fontSize: 14, paddingLeft: 16 }}>
         {emergencyIssues.map((issue) => (
           <li
             key={issue._id}
