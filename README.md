@@ -1,104 +1,188 @@
-# 🗺️ Community Problem Reporter
+# 🏙️ Community Problem Reporter
 
-### Sprint 1 — Map & Zones Foundation
+**A map-driven civic issue reporting platform**
 
-This project is a **map-based civic issue reporting platform**.
-Sprint 1 focuses on **project setup and interactive map foundations** using **OpenLayers**.
+Community Problem Reporter is a **location-aware web application** that allows residents to report local issues directly on a map, while enabling administrators and zone managers to monitor, manage, and resolve them efficiently.
+
+Built with **MERN Stack + OpenLayers**, the system emphasizes **spatial accuracy, role-based access, and real-time collaboration**.
 
 ---
 
-## ✅ Sprint 1 Features
+## 🚀 Key Features (Current MVP)
 
-* Project setup with **React (Vite)** and **Node.js (Express)**
-* Interactive **OpenLayers** map (non-satellite)
-* Map centered on **Mumbai**
-* Static **GeoJSON zone polygons**
-* Zones displayed with:
+### 🗺️ Interactive Map (Core Feature)
 
-  * Distinct colors
-  * Zone name labels
-* **Hover interaction**
+* OpenLayers-powered map
+* Zone boundaries rendered as polygons
+* Issues displayed as map markers
+* Emergency issues highlighted distinctly
+* Smooth zoom & focus on issue selection
 
-  * Zone highlights on mouse hover
-  * Pointer cursor on hover
-* **Click interaction**
+---
 
-  * Clicking a zone logs its name in console
-* Clean, scalable folder structure
-* Backend health API (`/api/health`)
-* Versioned and pushed to **GitHub**
+### 📍 Issue Reporting (Resident Flow)
+
+* Drop a pin anywhere on the map
+* Preview pin before creating an issue
+* Create issues with:
+
+  * Title & description
+  * Category
+  * Severity (Normal / Emergency)
+* Issue is **automatically assigned to the correct zone** using spatial analysis
+
+---
+
+### 🧑‍🤝‍🧑 Role-Based System
+
+| Role             | Capabilities                               |
+| ---------------- | ------------------------------------------ |
+| **Resident**     | Report issues, view own issues, comment    |
+| **Zone Manager** | View & manage issues in assigned zones     |
+| **Admin**        | View all issues, emergencies, assign zones |
+
+Role enforcement is handled **server-side** (JWT + middleware).
+
+---
+
+### 🧠 Zone-Aware Intelligence (Foundational)
+
+* Each issue belongs to exactly one zone
+* Zones support hierarchy (city → sector → area → society)
+* Zone managers only see issues from their assigned zones
+* Foundation laid for future zone analytics
+
+---
+
+### 💬 Real-Time Comments
+
+* Issue-level discussion thread
+* Live updates via Socket.IO
+* No page refresh required
+
+---
+
+### ⚠️ Emergency Handling
+
+* Emergency issues visually highlighted
+* Separate emergency list in Admin sidebar
+* Immediate visibility across roles
+
+---
+
+### 📊 Admin Dashboard
+
+* Total issue count
+* Open vs resolved issues
+* Emergency issue overview
+* Issue status management (open / in-progress / resolved)
 
 ---
 
 ## 🧱 Tech Stack
 
-**Frontend**
-
-* React (Vite)
-* OpenLayers
-* JavaScript
-
-**Backend**
-
-* Node.js
-* Express.js
-
----
-
-## 📂 Project Structure (Simplified)
-
-```
-frontend/
- ├─ src/
- │  ├─ components/Map/
- │  ├─ pages/
- │  └─ App.jsx
- └─ public/zones/sample-zones.geojson
-
-backend/
- └─ src/
-```
-
----
-
-## ▶️ Running the Project
-
 ### Frontend
 
+* **React (Vite)**
+* **OpenLayers** (maps & geospatial rendering)
+* Axios
+* Socket.IO Client
+
+### Backend
+
+* **Node.js + Express**
+* **MongoDB + Mongoose**
+* **Turf.js** (geospatial computations)
+* Socket.IO
+* JWT Authentication
+
+---
+
+## 🗂️ Project Structure
+
+```
+community-problem-reporter/
+├── backend/
+│   ├── src/
+│   │   ├── controllers/
+│   │   ├── models/
+│   │   ├── routes/
+│   │   ├── middleware/
+│   │   └── utils/
+│   └── .env
+│
+├── frontend/
+│   ├── src/
+│   │   ├── components/
+│   │   ├── pages/
+│   │   ├── context/
+│   │   └── socket.js
+│   └── vite.config.js
+```
+
+---
+
+## 🔐 Authentication & Security
+
+* JWT-based authentication
+* Role-based authorization middleware
+* Protected API routes
+* Secure password hashing (bcrypt)
+
+---
+
+## 🧪 Current Status
+
+✅ Core functionality complete
+✅ Stable backend architecture
+✅ Fully working role-based flows
+
+🟡 UI polish in progress
+🟡 Zone intelligence & analytics pending
+
+This project is **beyond demo stage** and actively evolving.
+
+---
+
+## 🔜 Planned Enhancements
+
+* Zone intelligence dashboards
+* Heatmaps & analytics
+* Improved UI/UX design
+* Image uploads for issues
+* Resolution time metrics
+* Better mobile responsiveness
+
+---
+
+## 🛠️ Setup (Local)
+
 ```bash
+# Backend
+cd backend
+npm install
+npm run dev
+
+# Frontend
 cd frontend
 npm install
 npm run dev
 ```
 
-### Backend
+Create `.env` in backend with:
 
-```bash
-cd backend
-npm install
-npm run dev
+```
+MONGO_URI=your_mongo_url
+JWT_SECRET=your_secret
+CLOUDINARY_KEYS=...
 ```
 
 ---
 
-## 🚧 What’s Next (Sprint 2)
+## 📌 Philosophy
 
-* MongoDB integration
-* Zone hierarchy (City → Sector → Area)
-* Admin zone management
-* Turf.js spatial logic
+> Real problems deserve spatial context.
+> Good governance starts with visibility.
 
----
 
-## 🏁 Status
 
-✅ **Sprint 1 completed and stable**
-This repository represents a **working foundation** for future sprints.
-
----
-
-If you want, I can also:
-
-* Make this README more technical
-* Add screenshots section
-* Write Sprint 2 README template
