@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import axios from "axios";
 import { useAuth } from "../context/AuthContext";
 
@@ -20,9 +20,19 @@ const AppShell = () => {
 
   const [pinMode, setPinMode] = useState(false);
   const [draftLocation, setDraftLocation] = useState(null);
-
   const [showReportModal, setShowReportModal] = useState(false);
 
+  /* ---------- NORMALIZE USER ID (CRITICAL FIX) ---------- */
+  const currentUserId = useMemo(() => {
+    return (
+      user?._id ||
+      user?.id ||
+      user?.user?._id ||
+      null
+    );
+  }, [user]);
+
+  /* ---------- FETCH ISSUES ---------- */
   const fetchIssues = async () => {
     const res = await axios.get("http://localhost:5000/api/issues");
     setIssues(res.data);
@@ -32,18 +42,21 @@ const AppShell = () => {
     fetchIssues();
   }, []);
 
-  console.log("📌 AppShell render:", {
-    pinMode,
-    draftLocation,
-    showReportModal,
-  });
+  /* ---------- RESIDENT ISSUE FILTER (FIXED) ---------- */
+  const myIssues = useMemo(() => {
+    if (!currentUserId) return [];
 
-  const myIssues = issues.filter((i) => {
-    if (!i.createdBy) return false;
-    if (typeof i.createdBy === "string") return i.createdBy === user._id;
-    return i.createdBy._id === user._id;
-  });
+    return issues.filter((issue) => {
+      const createdBy =
+        typeof issue.createdBy === "string"
+          ? issue.createdBy
+          : issue.createdBy?._id;
 
+      return createdBy === currentUserId;
+    });
+  }, [issues, currentUserId]);
+
+  /* ---------- SIDEBAR SELECTOR ---------- */
   const renderSidebar = () => {
     if (user.role === "resident") {
       return (
@@ -111,6 +124,7 @@ const AppShell = () => {
           </div>
         )}
 
+        {/* MAP */}
         <div style={{ flex: 1, position: "relative" }}>
           <MapView
             issues={issues}
@@ -118,11 +132,7 @@ const AppShell = () => {
             pinMode={pinMode}
             draftLocation={draftLocation}
             onMapClick={(coords) => {
-              console.log(
-                "🟢 AppShell accepting draftLocation:",
-                coords
-              );
-              setDraftLocation(coords); // ✅ ALWAYS accept
+              setDraftLocation(coords);
             }}
           />
 
@@ -148,7 +158,7 @@ const AppShell = () => {
             {pinMode ? "✕ Cancel Pin" : "📍 Drop Pin"}
           </button>
 
-          {/* CREATE ISSUE BUTTON */}
+          {/* CREATE ISSUE */}
           {pinMode && draftLocation && (
             <ReportIssueFAB
               onClick={() => setShowReportModal(true)}

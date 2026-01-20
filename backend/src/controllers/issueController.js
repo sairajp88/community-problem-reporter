@@ -82,7 +82,7 @@ export const createIssue = async (req, res) => {
 
 /**
  * GET /api/issues
- * Visibility rules (CURRENT PHASE):
+ * Visibility rules:
  * - admin → all issues
  * - resident → all issues
  * - zone_manager / subzone_manager → assigned zones only
@@ -98,12 +98,9 @@ export const getIssues = async (req, res) => {
       filter.zone = { $in: req.user.assignedZones || [] };
     }
 
-    // NOTE:
-    // admin & resident intentionally get ALL issues
-
     const issues = await Issue.find(filter)
       .populate("zone", "name level")
-      .populate("createdBy", "name role");
+      .populate("createdBy", "_id name role"); // ✅ FIXED
 
     res.json(issues);
   } catch (error) {
@@ -122,7 +119,7 @@ export const getIssueById = async (req, res) => {
 
     const issue = await Issue.findById(req.params.id)
       .populate("zone", "name level")
-      .populate("createdBy", "name role");
+      .populate("createdBy", "_id name role"); // ✅ FIXED
 
     if (!issue) {
       return res.status(404).json({ message: "Issue not found" });

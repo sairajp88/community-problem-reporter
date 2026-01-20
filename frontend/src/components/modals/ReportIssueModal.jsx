@@ -4,14 +4,14 @@ import axios from "axios";
 const ReportIssueModal = ({
   open,
   onClose,
-  onCreated,
-  onIssueCreated, // ✅ NEW CALLBACK
+  onIssueCreated,
   location,
 }) => {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [category, setCategory] = useState("general");
   const [severity, setSeverity] = useState("normal");
+  const [images, setImages] = useState([]);
   const [loading, setLoading] = useState(false);
 
   if (!open) return null;
@@ -20,13 +20,15 @@ const ReportIssueModal = ({
     if (!title || !description) return;
 
     if (!location) {
-      alert("Please click on the map to select a location");
+      alert("Please select a location on the map");
       return;
     }
 
     setLoading(true);
 
     try {
+      const token = localStorage.getItem("token");
+
       const form = new FormData();
       form.append("title", title);
       form.append("description", description);
@@ -35,17 +37,28 @@ const ReportIssueModal = ({
       form.append("latitude", location.latitude);
       form.append("longitude", location.longitude);
 
-      await axios.post("http://localhost:5000/api/issues", form);
+      // 🔑 APPEND IMAGES
+      for (const file of images) {
+        form.append("images", file);
+      }
 
-      // ✅ PHASE 5 FIX — trigger re-fetch in AppShell
+      await axios.post(
+        "http://localhost:5000/api/issues",
+        form,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
       onIssueCreated?.();
-
       onClose();
-      onCreated?.();
-    } catch {
+    } catch (err) {
       alert("Failed to create issue");
     } finally {
       setLoading(false);
+      setImages([]);
     }
   };
 
@@ -63,7 +76,7 @@ const ReportIssueModal = ({
     >
       <div
         style={{
-          width: 360,
+          width: 380,
           background: "white",
           padding: 20,
           borderRadius: 8,
@@ -100,11 +113,20 @@ const ReportIssueModal = ({
         <select
           value={severity}
           onChange={(e) => setSeverity(e.target.value)}
-          style={{ width: "100%", marginBottom: 12 }}
+          style={{ width: "100%", marginBottom: 8 }}
         >
           <option value="normal">Normal</option>
           <option value="emergency">Emergency</option>
         </select>
+
+        {/* IMAGE INPUT */}
+        <input
+          type="file"
+          multiple
+          accept="image/*"
+          onChange={(e) => setImages(Array.from(e.target.files))}
+          style={{ marginBottom: 12 }}
+        />
 
         <div style={{ display: "flex", justifyContent: "flex-end", gap: 8 }}>
           <button onClick={onClose}>Cancel</button>

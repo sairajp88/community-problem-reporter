@@ -7,7 +7,7 @@ const IssuePopup = ({ issue, onClose }) => {
   const [text, setText] = useState("");
   const [loading, setLoading] = useState(false);
 
-  // 🔁 Fetch comments on open
+  // Fetch comments on open
   useEffect(() => {
     if (!issue) return;
 
@@ -29,7 +29,7 @@ const IssuePopup = ({ issue, onClose }) => {
     fetchComments();
   }, [issue]);
 
-  // 🔔 Live comments
+  // Live comments
   useEffect(() => {
     if (!issue) return;
 
@@ -40,10 +40,7 @@ const IssuePopup = ({ issue, onClose }) => {
     };
 
     socket.on("comment:new", handler);
-
-    return () => {
-      socket.off("comment:new", handler);
-    };
+    return () => socket.off("comment:new", handler);
   }, [issue]);
 
   const submitComment = async () => {
@@ -64,7 +61,6 @@ const IssuePopup = ({ issue, onClose }) => {
 
     setText("");
     setLoading(false);
-    // ⚠️ No refetch needed — socket will update
   };
 
   if (!issue) return null;
@@ -75,8 +71,8 @@ const IssuePopup = ({ issue, onClose }) => {
         position: "absolute",
         bottom: 20,
         left: 20,
-        width: 340,
-        maxHeight: 420,
+        width: 360,
+        maxHeight: 460,
         overflowY: "auto",
         background: "white",
         padding: 12,
@@ -91,7 +87,6 @@ const IssuePopup = ({ issue, onClose }) => {
         <button onClick={onClose}>✕</button>
       </div>
 
-      {/* Meta */}
       <div style={{ fontSize: 13, marginTop: 6 }}>
         <strong>Status:</strong> {issue.status}
       </div>
@@ -102,7 +97,7 @@ const IssuePopup = ({ issue, onClose }) => {
           display: "inline-block",
           padding: "4px 8px",
           background:
-            issue.severity === "emergency" ? "#ff4d4d" : "#e0e0e0",
+            issue.severity === "emergency" ? "#dc2626" : "#e5e7eb",
           color: issue.severity === "emergency" ? "white" : "black",
           borderRadius: 4,
           fontSize: 12,
@@ -111,12 +106,30 @@ const IssuePopup = ({ issue, onClose }) => {
         {issue.severity.toUpperCase()}
       </div>
 
-      {/* Description */}
       <p style={{ marginTop: 8, fontSize: 14 }}>
         {issue.description}
       </p>
 
-      {/* Comments */}
+      {/* IMAGES */}
+      {issue.images && issue.images.length > 0 && (
+        <div style={{ marginTop: 10 }}>
+          <strong>Images</strong>
+          {issue.images.map((url, idx) => (
+            <img
+              key={idx}
+              src={url}
+              alt="issue"
+              style={{
+                width: "100%",
+                marginTop: 6,
+                borderRadius: 4,
+              }}
+            />
+          ))}
+        </div>
+      )}
+
+      {/* COMMENTS */}
       <div style={{ marginTop: 12 }}>
         <strong>Comments</strong>
 
@@ -142,7 +155,7 @@ const IssuePopup = ({ issue, onClose }) => {
         ))}
       </div>
 
-      {/* Add comment */}
+      {/* ADD COMMENT */}
       <div style={{ marginTop: 10 }}>
         <textarea
           value={text}
