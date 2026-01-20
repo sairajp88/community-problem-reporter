@@ -48,28 +48,68 @@ const MapView = ({
   const mapRef = useRef(null);
   const issueLayerRef = useRef(null);
   const pinLayerRef = useRef(null);
-
-  // 🔑 THE IMPORTANT FIX
   const pinModeRef = useRef(pinMode);
 
   const [selectedIssue, setSelectedIssue] = useState(null);
   const [currentZoom, setCurrentZoom] = useState(12);
 
-  // 🔁 Keep ref in sync with React state
+  /* ---------- KEEP pinModeRef SYNC ---------- */
   useEffect(() => {
     pinModeRef.current = pinMode;
-    console.log("🔁 pinModeRef updated:", pinModeRef.current);
   }, [pinMode]);
 
-  /* ---------- INIT MAP (ONCE ONLY) ---------- */
+  /* ---------- INIT MAP ---------- */
   useEffect(() => {
     if (!containerRef.current || mapRef.current) return;
 
     const init = async () => {
       console.log("🗺️ Initializing map");
 
-      const zonesRes = await axios.get("http://localhost:5000/api/zones");
-      const zoneLayer = createZoneLayer(zonesRes.data);
+      const token = localStorage.getItem("token");
+      const storedUser = localStorage.getItem("user");
+      const user = storedUser ? JSON.parse(storedUser) : null;
+
+      const role = user?.role;
+
+      // Always fetch zones
+      const zonesRes = await axios.get(
+        "http://localhost:5000/api/zones",
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      let intelligence = [];
+
+      // 🔐 Only fetch intelligence for allowed roles
+      if (
+        role === "admin" ||
+        role === "zone_manager" ||
+        role === "subzone_manager"
+      ) {
+        try {
+          const intelligenceRes = await axios.get(
+            "http://localhost:5000/api/zones/intelligence",
+            {
+              headers: {
+                Authorization: `Bearer ${token}`,
+              },
+            }
+          );
+          intelligence = intelligenceRes.data;
+        } catch (err) {
+          console.warn(
+            "⚠️ Zone intelligence not available for this user"
+          );
+        }
+      }
+
+      const zoneLayer = createZoneLayer(
+        zonesRes.data,
+        intelligence
+      );
 
       const issueLayer = new VectorLayer({
         source: new VectorSource(),
@@ -103,11 +143,7 @@ const MapView = ({
       map.on("singleclick", (event) => {
         const [lon, lat] = toLonLat(event.coordinate);
 
-        console.log("🗺️ Map clicked");
-        console.log("📌 pinModeRef:", pinModeRef.current);
-
         if (pinModeRef.current) {
-          console.log("🟢 Pin mode active → placing pin");
           onMapClick?.({ latitude: lat, longitude: lon });
           return;
         }
@@ -139,12 +175,7 @@ const MapView = ({
       const isEmergency = issue.severity === "emergency";
       if (!isEmergency && currentZoom < 14) return;
 
-      if (
-        !issue.location ||
-        !Array.isArray(issue.location.coordinates)
-      ) {
-        return;
-      }
+      if (!issue.location?.coordinates) return;
 
       const feature = new Feature({
         geometry: new Point(
@@ -160,8 +191,6 @@ const MapView = ({
 
   /* ---------- DRAFT PIN ---------- */
   useEffect(() => {
-    console.log("📍 draftLocation:", draftLocation);
-
     if (!pinLayerRef.current) return;
 
     const source = pinLayerRef.current.getSource();
@@ -183,16 +212,10 @@ const MapView = ({
 
   /* ---------- FOCUS ISSUE ---------- */
   useEffect(() => {
-    if (
-      !focusedIssue ||
-      !focusedIssue.location ||
-      !Array.isArray(focusedIssue.location.coordinates)
-    ) {
-      return;
-    }
+    if (!focusedIssue?.location?.coordinates) return;
+    if (!mapRef.current) return;
 
     const [lon, lat] = focusedIssue.location.coordinates;
-    if (!mapRef.current) return;
 
     mapRef.current.updateSize();
     mapRef.current.getView().animate({

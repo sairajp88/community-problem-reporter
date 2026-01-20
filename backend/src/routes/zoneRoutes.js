@@ -1,6 +1,9 @@
 import express from "express";
 import Zone from "../models/Zone.js";
 import { protect, authorize } from "../middleware/authMiddleware.js";
+import {
+  getZoneIntelligence,
+} from "../controllers/zoneIntelligenceController.js";
 
 const router = express.Router();
 
@@ -16,6 +19,17 @@ router.get("/", protect, async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 });
+
+/**
+ * GET /api/zones/intelligence
+ * Access: Admin, Zone Manager
+ */
+router.get(
+  "/intelligence",
+  protect,
+  authorize("admin", "zone_manager", "subzone_manager"),
+  getZoneIntelligence
+);
 
 /**
  * POST /api/zones
